@@ -1,0 +1,11 @@
+[package]
+name = "test_double"
+version = "0.1.0"
+authors = ["Jason Grlicky <jason@paracosm.us>"]
+
+[dependencies]
+syn = { version = "0.12", features = ["full"] }
+quote = "0.4"
+
+[lib]
+proc-macro = true

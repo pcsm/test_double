@@ -37,8 +37,9 @@ fn internal(items: Vec<syn::Item>, output: &mut Tokens) {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
+    fn test_basic() {
     }
 }

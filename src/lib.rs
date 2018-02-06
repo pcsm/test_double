@@ -28,7 +28,7 @@ fn functionlike_internal(input: &str, output: &mut Tokens) {
 }
 
 #[proc_macro_attribute]
-pub fn double(_metadata: TokenStream, input: TokenStream) -> TokenStream {
+pub fn use_test_double(_metadata: TokenStream, input: TokenStream) -> TokenStream {
     let mut output = Tokens::new();
 
     attribute_internal(&input.to_string(), &mut output);

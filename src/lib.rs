@@ -2,7 +2,6 @@
 
 extern crate proc_macro;
 extern crate proc_macro2;
-#[macro_use]
 extern crate syn;
 #[macro_use]
 extern crate quote;
@@ -13,9 +12,9 @@ use quote::Tokens;
 #[proc_macro]
 pub fn test_double(input: TokenStream) -> TokenStream {
     let mut output = Tokens::new();
+
     test_double_internal(&input.to_string(), &mut output);
 
-    // Turn that back into a token stream
     output.into()
 }
 
@@ -26,12 +25,9 @@ fn test_double_internal(input: &str, output: &mut Tokens) {
     for item in file.items {
         match item {
             syn::Item::Use(mut use_original) => {
-                // Make a copy of the original `use blah::Blah;`
-                let mut use_mock = use_original.clone();
+                // Make a copy of the original use statement
+                let mut use_double = use_original.clone();
 
-
-                // let cfg = quote! { cfg };
-                // let cfg: syn::Path = syn::parse(cfg.into()).unwrap();
                 let cfg: syn::Path = syn::Ident::from("cfg").into();
 
                 // Add `#[cfg(not(test))]` to our original use statement
@@ -56,14 +52,33 @@ fn test_double_internal(input: &str, output: &mut Tokens) {
                     tts: test.into(),
                     is_sugared_doc: false
                 };
-                use_mock.attrs.push(cfg_not_test);
+                use_double.attrs.push(cfg_not_test);
 
-                // Change the name of the item used
+                // Change the name of the item used for the double use statement.
+                // `use blah::Bar` => `use blah::BarMock as Bar`
+                // `use blah::Blah as Foo` => `use blah::BlahMock as Foo`
+                match &mut use_double.tree {
+                    &mut syn::UseTree::Path(ref mut use_path) => {
+                        // Change the imported name
+                        let ident = use_path.ident;
+                        let name = quote! { #ident };
+                        let double_name = syn::Ident::from(format!("{}Mock", name));
+                        use_path.ident = double_name;
+
+                        // If we don't have a rename set up already, add one back
+                        // to the original name.
+                        if use_path.rename.is_none() {
+                            use_path.rename = Some((Default::default(), ident));
+                        }
+                    },
+                    &mut syn::UseTree::Glob(_) => panic!("test_double! macro does not yet support * imports"),
+                    &mut syn::UseTree::List(_) => panic!("test_double! macro does not yet support imports lists")
+                }
 
                 // Add the result to the back of our list of output tokens
                 output.append_all(quote!{
                     #use_original
-                    #use_mock
+                    #use_double
                 });
             },
             _ => panic!("Only use statements can be in the test_double! macro")
@@ -81,30 +96,36 @@ mod tests {
             use quote::Tokens;
             use syn::Item;
         };
-        // let mut first_prefix: syn::Punctuated<syn::Ident, syn::Colon2> = syn::Punctuated::new();
-        // first_prefix.push(syn::Ident::from("quote"));
-        // let first = syn::Item::Use(ItemUse {
-        //     attrs: vec![],
-        //     vis: syn::Visibility::Inherited,
-        //     use_token: Token![use],
-        //     leading_colon: None,
-        //     prefix: first_prefix,
-        //     tree: ,
-        //     semi_token: Token![;]
-        // });
-        // let second = 6;
-        // let input = vec![first, second];
 
         let expected = quote! {
             #[cfg(not(test))]
             use quote::Tokens;
             #[cfg(test)]
-            use quote::TokensMock;
+            use quote::TokensMock as Tokens;
 
             #[cfg(not(test))]
             use syn::Item;
             #[cfg(test)]
-            use syn::ItemMock;
+            use syn::ItemMock as Item;
+        };
+
+        let mut output = Tokens::new();
+        test_double_internal(&input.to_string(), &mut output);
+
+        assert_eq!(expected, output);
+    }
+
+    #[test]
+    fn test_rename() {
+        let input = quote! {
+            use quote::Tokens as SomethingElse;
+        };
+
+        let expected = quote! {
+            #[cfg(not(test))]
+            use quote::Tokens as SomethingElse;
+            #[cfg(test)]
+            use quote::TokensMock as SomethingElse;
         };
 
         let mut output = Tokens::new();

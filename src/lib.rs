@@ -27,16 +27,25 @@ fn functionlike_internal(input: &str, output: &mut Tokens) {
     }
 }
 
+/// Can be used like `#[test_double]` to use `____Mock` in tests or
+/// `#[test_double(ObjectDummy)]` to use `ObjectDummy`.
 #[proc_macro_attribute]
-pub fn test_double(_metadata: TokenStream, input: TokenStream) -> TokenStream {
+pub fn test_double(metadata: TokenStream, input: TokenStream) -> TokenStream {
     let mut output = Tokens::new();
 
-    attribute_internal(&input.to_string(), &mut output);
+    attribute_internal(&metadata.to_string(), &input.to_string(), &mut output);
 
     output.into()
 }
 
-fn attribute_internal(input: &str, output: &mut Tokens) {
+fn attribute_internal(metadata: &str, input: &str, output: &mut Tokens) {
+    if !metadata.is_empty() {
+        let meta: syn::TypeParen = syn::parse_str(metadata).expect("Invalid input to #[test_double] - use it like #[test_double(AlternateName)].");
+        // match meta.elem {
+
+        // }
+    }
+
     // Generate the AST from the token stream we were given
     let item: syn::Item = syn::parse_str(input).expect("Failed to parse input");
 
@@ -92,8 +101,8 @@ fn process_single_item(item: syn::Item, output: &mut Tokens) {
                         use_path.rename = Some((Default::default(), ident));
                     }
                 },
-                &mut syn::UseTree::Glob(_) => panic!("test_double! macro does not yet support * imports"),
-                &mut syn::UseTree::List(_) => panic!("test_double! macro does not yet support imports lists")
+                &mut syn::UseTree::Glob(_) => panic!("test_double macros do not yet support * imports"),
+                &mut syn::UseTree::List(_) => panic!("test_double macros do not yet support imports lists")
             }
 
             // Add the result to the back of our list of output tokens
@@ -149,7 +158,7 @@ mod tests {
         };
 
         let mut output = Tokens::new();
-        attribute_internal(&input.to_string(), &mut output);
+        attribute_internal("", &input.to_string(), &mut output);
 
         assert_eq!(expected, output);
     }

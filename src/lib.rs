@@ -10,7 +10,7 @@ use proc_macro::TokenStream;
 use quote::Tokens;
 
 #[proc_macro]
-pub fn test_double(input: TokenStream) -> TokenStream {
+pub fn test_doubles(input: TokenStream) -> TokenStream {
     let mut output = Tokens::new();
 
     functionlike_internal(&input.to_string(), &mut output);
@@ -28,7 +28,7 @@ fn functionlike_internal(input: &str, output: &mut Tokens) {
 }
 
 #[proc_macro_attribute]
-pub fn use_test_double(_metadata: TokenStream, input: TokenStream) -> TokenStream {
+pub fn test_double(_metadata: TokenStream, input: TokenStream) -> TokenStream {
     let mut output = Tokens::new();
 
     attribute_internal(&input.to_string(), &mut output);

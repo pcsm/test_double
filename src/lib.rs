@@ -1,8 +1,9 @@
 #![feature(proc_macro)]
 
 extern crate proc_macro;
-extern crate syn;
+extern crate proc_macro2;
 #[macro_use]
+extern crate syn;
 #[macro_use]
 extern crate quote;
 
@@ -24,10 +25,45 @@ fn test_double_internal(input: &str, output: &mut Tokens) {
 
     for item in file.items {
         match item {
-            // syn::Item::Use(use_item) => {
-            item @ syn::Item::Use(_) => {
+            syn::Item::Use(mut use_original) => {
+                // Make a copy of the original `use blah::Blah;`
+                let mut use_mock = use_original.clone();
+
+
+                // let cfg = quote! { cfg };
+                // let cfg: syn::Path = syn::parse(cfg.into()).unwrap();
+                let cfg: syn::Path = syn::Ident::from("cfg").into();
+
+                // Add `#[cfg(not(test))]` to our original use statement
+                let not_test = quote! { (not(test)) };
+                let cfg_not_test = syn::Attribute {
+                    pound_token: Default::default(),
+                    style: syn::AttrStyle::Outer,
+                    bracket_token: Default::default(),
+                    path: cfg.clone(),
+                    tts: not_test.into(),
+                    is_sugared_doc: false
+                };
+                use_original.attrs.push(cfg_not_test);
+
+                // Add `#[cfg(test)]` to our test double use statement
+                let test = quote! { (test) };
+                let cfg_not_test = syn::Attribute {
+                    pound_token: Default::default(),
+                    style: syn::AttrStyle::Outer,
+                    bracket_token: Default::default(),
+                    path: cfg,
+                    tts: test.into(),
+                    is_sugared_doc: false
+                };
+                use_mock.attrs.push(cfg_not_test);
+
+                // Change the name of the item used
+
+                // Add the result to the back of our list of output tokens
                 output.append_all(quote!{
-                    #item
+                    #use_original
+                    #use_mock
                 });
             },
             _ => panic!("Only use statements can be in the test_double! macro")

@@ -23,7 +23,7 @@ fn functionlike_internal(input: &str, output: &mut Tokens) {
     let file: syn::File = syn::parse_str(input).expect("Failed to parse input");
 
     for item in file.items {
-       process_single_item(item, output); 
+       process_single_item(item, None, output); 
     }
 }
 
@@ -39,20 +39,28 @@ pub fn test_double(metadata: TokenStream, input: TokenStream) -> TokenStream {
 }
 
 fn attribute_internal(metadata: &str, input: &str, output: &mut Tokens) {
-    if !metadata.is_empty() {
-        let meta: syn::TypeParen = syn::parse_str(metadata).expect("Invalid input to #[test_double] - use it like #[test_double(AlternateName)].");
-        // match meta.elem {
+    let mut alternate_ident = None;
 
-        // }
+    if !metadata.is_empty() {
+        let error_message = "Invalid input to #[test_double] - use it like #[test_double(AlternateName)].";
+        let meta: syn::Expr = syn::parse_str(metadata).expect(error_message);
+        match meta {
+            syn::Expr::Paren(expr_paren) => {
+                let inner = expr_paren.expr;
+                let inner = quote! { #inner };
+                alternate_ident = Some(syn::Ident::from(inner.to_string()));
+            },
+            _ => panic!(error_message)
+        }
     }
 
     // Generate the AST from the token stream we were given
     let item: syn::Item = syn::parse_str(input).expect("Failed to parse input");
 
-    process_single_item(item, output);
+    process_single_item(item, alternate_ident, output);
 }
 
-fn process_single_item(item: syn::Item, output: &mut Tokens) {
+fn process_single_item(item: syn::Item, alternate_ident: Option<syn::Ident>, output: &mut Tokens) {
     match item {
         syn::Item::Use(mut use_original) => {
             // Make a copy of the original use statement
@@ -92,8 +100,8 @@ fn process_single_item(item: syn::Item, output: &mut Tokens) {
                     // Change the imported name
                     let ident = use_path.ident;
                     let name = quote! { #ident };
-                    let double_name = syn::Ident::from(format!("{}Mock", name));
-                    use_path.ident = double_name;
+                    let default_ident = syn::Ident::from(format!("{}Mock", name)); 
+                    use_path.ident = alternate_ident.unwrap_or(default_ident);
 
                     // If we don't have a rename set up already, add one back
                     // to the original name.
@@ -159,6 +167,25 @@ mod tests {
 
         let mut output = Tokens::new();
         attribute_internal("", &input.to_string(), &mut output);
+
+        assert_eq!(expected, output);
+    }
+
+    #[test]
+    fn test_attribute_alternate_name() {
+        let input = quote! {
+            use quote::Tokens;
+        };
+
+        let expected = quote! {
+            #[cfg(not(test))]
+            use quote::Tokens;
+            #[cfg(test)]
+            use quote::TokensAlternate as Tokens;
+        };
+
+        let mut output = Tokens::new();
+        attribute_internal("(TokensAlternate)", &input.to_string(), &mut output);
 
         assert_eq!(expected, output);
     }

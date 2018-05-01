@@ -1,4 +1,4 @@
-test_double [![Docs](https://docs.rs/test_double/badge.svg)](https://docs.rs/test_double) [![Crates.io](https://img.shields.io/crates/v/test_double.svg)](https://crates.io/crates/test_double)
+test_double [![Docs](https://docs.rs/test_double/badge.svg)](https://docs.rs/test_double) [![Crates.io](https://img.shields.io/crates/v/test_double.svg)](https://crates.io/crates/test_double) ![Nightly](https://img.shields.io/badge/rustc-nightly-red.svg)
 ==================================================================
 
 A procedural macro that can swap in mock objects, dummy objects, or other test doubles only when testing. Requires Nightly Rust.

@@ -6,7 +6,6 @@ description = "Procedural macro for substituting one type for another when testi
 keywords = ["mock", "test", "testing", "TDD"]
 categories = ["development-tools::testing"]
 readme = "README.md"
-documentation = "https://docs.rs/test_double"
 repository = "https://github.com/pcsm/test_double"
 license = "MIT OR Apache-2.0"
 

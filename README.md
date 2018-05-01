@@ -13,7 +13,7 @@ To use, add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-test_double = "0.1.0"
+test_double = "0.1.1"
 ```
 
 Note that this crate has not yet reached version 1.0, so the API may change drastically between releases.

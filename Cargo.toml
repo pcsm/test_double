@@ -2,6 +2,16 @@
 name = "test_double"
 version = "0.1.0"
 authors = ["Jason Grlicky <jason@paracosm.us>"]
+description = "Procedural macro for substituting one type for another when testing."
+keywords = ["mock", "test", "testing", "TDD"]
+categories = ["development-tools::testing"]
+readme = "README.md"
+documentation = "https://docs.rs/test_double"
+repository = "https://github.com/pcsm/test_double"
+license = "MIT OR Apache-2.0"
+
+[badges]
+maintenance = { status = "experimental" }
 
 [dependencies]
 syn = { version = "0.12", features = ["full"] }

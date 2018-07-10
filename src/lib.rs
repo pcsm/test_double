@@ -23,7 +23,7 @@ fn functionlike_internal(input: &str, output: &mut Tokens) {
     let file: syn::File = syn::parse_str(input).expect("Failed to parse input");
 
     for item in file.items {
-       process_single_item(item, None, output); 
+        process_single_item(item, None, output);
     }
 }
 
@@ -42,15 +42,16 @@ fn attribute_internal(metadata: &str, input: &str, output: &mut Tokens) {
     let mut alternate_ident = None;
 
     if !metadata.is_empty() {
-        let error_message = "Invalid input to #[test_double] - use it like #[test_double(AlternateName)].";
+        let error_message =
+            "Invalid input to #[test_double] - use it like #[test_double(AlternateName)].";
         let meta: syn::Expr = syn::parse_str(metadata).expect(error_message);
         match meta {
             syn::Expr::Paren(expr_paren) => {
                 let inner = expr_paren.expr;
                 let inner = quote! { #inner };
                 alternate_ident = Some(syn::Ident::from(inner.to_string()));
-            },
-            _ => panic!(error_message)
+            }
+            _ => panic!(error_message),
         }
     }
 
@@ -76,7 +77,7 @@ fn process_single_item(item: syn::Item, alternate_ident: Option<syn::Ident>, out
                 bracket_token: Default::default(),
                 path: cfg.clone(),
                 tts: not_test.into(),
-                is_sugared_doc: false
+                is_sugared_doc: false,
             };
             use_original.attrs.push(cfg_not_test);
 
@@ -88,7 +89,7 @@ fn process_single_item(item: syn::Item, alternate_ident: Option<syn::Ident>, out
                 bracket_token: Default::default(),
                 path: cfg,
                 tts: test.into(),
-                is_sugared_doc: false
+                is_sugared_doc: false,
             };
             use_double.attrs.push(cfg_not_test);
 
@@ -100,7 +101,7 @@ fn process_single_item(item: syn::Item, alternate_ident: Option<syn::Ident>, out
                     // Change the imported name
                     let ident = use_path.ident;
                     let name = quote! { #ident };
-                    let default_ident = syn::Ident::from(format!("{}Mock", name)); 
+                    let default_ident = syn::Ident::from(format!("{}Mock", name));
                     use_path.ident = alternate_ident.unwrap_or(default_ident);
 
                     // If we don't have a rename set up already, add one back
@@ -108,9 +109,13 @@ fn process_single_item(item: syn::Item, alternate_ident: Option<syn::Ident>, out
                     if use_path.rename.is_none() {
                         use_path.rename = Some((Default::default(), ident));
                     }
-                },
-                &mut syn::UseTree::Glob(_) => panic!("test_double macros do not yet support * imports"),
-                &mut syn::UseTree::List(_) => panic!("test_double macros do not yet support imports lists")
+                }
+                &mut syn::UseTree::Glob(_) => {
+                    panic!("test_double macros do not yet support * imports")
+                }
+                &mut syn::UseTree::List(_) => {
+                    panic!("test_double macros do not yet support imports lists")
+                }
             }
 
             // Add the result to the back of our list of output tokens
@@ -118,8 +123,8 @@ fn process_single_item(item: syn::Item, alternate_ident: Option<syn::Ident>, out
                 #use_original
                 #use_double
             });
-        },
-        _ => panic!("Only use statements can be in the test_double! macro")
+        }
+        _ => panic!("Only use statements can be in the test_double! macro"),
     }
 }
 

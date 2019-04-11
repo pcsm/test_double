@@ -66,7 +66,7 @@ fn process_single_item(item: syn::Item, alternate_ident: Option<syn::Ident>, out
             modify_use_for_double(&mut use_double, alternate_ident);
 
             // Add the result to the back of our list of output tokens
-            output.extend(quote!{
+            output.extend::<TokenStream>(quote!{
                 #use_original
                 #use_double
             }.into());

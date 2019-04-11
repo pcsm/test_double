@@ -100,30 +100,47 @@ fn modify_use_for_double(use_double: &mut syn::ItemUse, alternate_ident: Option<
     };
     use_double.attrs.push(cfg_not_test);
 
-    // Change the name of the item used for the double use statement.
-    // `use blah::Bar` => `use blah::BarMock as Bar`
-    // `use blah::Blah as Foo` => `use blah::BlahMock as Foo`
-    match &mut use_double.tree {
-        &mut syn::UseTree::Path(ref mut use_path) => {
-            // Change the imported name
-            let ident = use_path.ident;
-            let name = quote! { #ident };
-            let default_ident = syn::Ident::new(&format!("{}Mock", name), Span::call_site());
-            use_path.ident = alternate_ident.unwrap_or(default_ident);
+    modify_tree_for_double(&mut use_double.tree, alternate_ident);
+}
 
-            // If we don't have a rename set up already, add one back
-            // to the original name.
-            if use_path.rename.is_none() {
-                use_path.rename = Some((Default::default(), ident));
-            }
+// Change the name of the item used for the double use statement.
+fn modify_tree_for_double(use_tree: &mut syn::UseTree, alternate_ident: Option<syn::Ident>) {
+    match use_tree {
+        syn::UseTree::Path(use_path) => {
+            modify_tree_for_double(&mut use_path.tree, alternate_ident)
         },
-        &mut syn::UseTree::Glob(_) => {
+        syn::UseTree::Name(use_name) => {
+            // Change the imported name and add an "as" also
+            // `use blah::Bar` => `use blah::BarMock as Bar`
+            let original_ident = use_name.ident.clone();
+            let default_ident = create_default_ident_for_double(&original_ident);
+            let modified_ident = alternate_ident.unwrap_or(default_ident);
+
+            let rename = syn::UseRename {
+                ident: modified_ident,
+                as_token: syn::token::As(Span::call_site()),
+                rename: original_ident
+            };
+            *use_tree = syn::UseTree::Rename(rename);
+        },
+        syn::UseTree::Rename(use_rename) => {
+            // Change the imported name
+            // `use blah::Blah as Foo` => `use blah::BlahMock as Foo`
+            let default_ident = create_default_ident_for_double(&use_rename.ident);
+            use_rename.ident = alternate_ident.unwrap_or(default_ident);
+        },
+        syn::UseTree::Glob(_) => {
             panic!("test_double macros do not yet support * imports")
         },
-        &mut syn::UseTree::Group(_) => {
+        syn::UseTree::Group(_) => {
             panic!("test_double macros do not yet support imports groups")
-        }
+        },
     }
+}
+
+fn create_default_ident_for_double(original_ident: &syn::Ident) -> syn::Ident {
+    let name = quote! { #original_ident };
+    syn::Ident::new(&format!("{}Mock", name), Span::call_site())
 }
 
 fn create_cfg_path() -> syn::Path {

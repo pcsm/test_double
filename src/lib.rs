@@ -108,6 +108,11 @@ fn modify_tree_for_double(use_tree: &mut syn::UseTree, alternate_ident: Option<s
         syn::UseTree::Path(use_path) => {
             modify_tree_for_double(&mut use_path.tree, alternate_ident)
         },
+        syn::UseTree::Group(use_group) => {
+            for tree in use_group.items.iter_mut() {
+                modify_tree_for_double(tree, None)
+            }
+        },
         syn::UseTree::Name(use_name) => {
             // Change the imported name and add an "as" also
             // `use blah::Bar` => `use blah::BarMock as Bar`
@@ -130,11 +135,6 @@ fn modify_tree_for_double(use_tree: &mut syn::UseTree, alternate_ident: Option<s
         },
         syn::UseTree::Glob(_) => {
             panic!("test_double macros do not support * imports")
-        },
-        syn::UseTree::Group(use_group) => {
-            for tree in use_group.items.iter_mut() {
-                modify_tree_for_double(tree, None)
-            }
         },
     }
 }

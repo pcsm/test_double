@@ -15,7 +15,6 @@ maintenance = { status = "experimental" }
 [dependencies]
 syn = { version = "0.12", features = ["full"] }
 quote = "0.4"
-proc-macro2 = "0.2"
 
 [lib]
 proc-macro = true

@@ -111,10 +111,10 @@ fn process_single_item(item: syn::Item, alternate_ident: Option<syn::Ident>, out
             }
 
             // Add the result to the back of our list of output tokens
-            output.append_all(quote!{
+            output.extend(quote!{
                 #use_original
                 #use_double
-            });
+            }.into());
         }
         _ => panic!("Only use statements can be in the test_double! macro"),
     }

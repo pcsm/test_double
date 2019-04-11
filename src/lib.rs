@@ -131,8 +131,10 @@ fn modify_tree_for_double(use_tree: &mut syn::UseTree, alternate_ident: Option<s
         syn::UseTree::Glob(_) => {
             panic!("test_double macros do not support * imports")
         },
-        syn::UseTree::Group(_) => {
-            panic!("test_double macros do not support imports groups")
+        syn::UseTree::Group(use_group) => {
+            for tree in use_group.items.iter_mut() {
+                modify_tree_for_double(tree, None)
+            }
         },
     }
 }

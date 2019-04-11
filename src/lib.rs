@@ -129,10 +129,10 @@ fn modify_tree_for_double(use_tree: &mut syn::UseTree, alternate_ident: Option<s
             use_rename.ident = alternate_ident.unwrap_or(default_ident);
         },
         syn::UseTree::Glob(_) => {
-            panic!("test_double macros do not yet support * imports")
+            panic!("test_double macros do not support * imports")
         },
         syn::UseTree::Group(_) => {
-            panic!("test_double macros do not yet support imports groups")
+            panic!("test_double macros do not support imports groups")
         },
     }
 }

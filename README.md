@@ -12,70 +12,67 @@ test_double = "0.1.1"
 
 Note that this crate has not yet reached version 1.0, so the API may change between releases.
 
-## Substituting One Type
+## Substituting One Type: `#[test_double]`
 
 The substituted name defaults to the original name, postfixed with "Mock":
 
 ```rust
 #[test_double]
-use ::image::ImageManager;
+use image::ImageManager;
 
 // Expands to:
 
 #[cfg(not(test))]
-use ::image::ImageManager;
+use image::ImageManager;
 #[cfg(test)]
-use ::image::ImageManagerMock as ImageManager;
+use image::ImageManagerMock as ImageManager;
 ```
 
 If you'd like to provide an alternate subsituted name, you can do so:
 
 ```rust
 #[test_double(IMDummy)]
-use ::image::ImageManager;
+use image::ImageManager;
 
 // Expands to:
 
 #[cfg(not(test))]
-use ::image::ImageManager;
+use image::ImageManager;
 #[cfg(test)]
-use ::image::IMDummy as ImageManager;
+use image::IMDummy as ImageManager;
 ```
 
 ### Limitations
 
 `#[test_double]` can't be used with:
 
-- Grouped imports, like `use blah::{foo, bar};`
-- Nested paths, like `use blah::{whatever, something::{foo, bar}};`
 - Glob imports, like `use blah::*;`
+- Grouped imports, like `use blah::{foo, bar};`, when providing an alternate substituted name
 
-## Substituting Multiple Types
+## Substituting Multiple Types: `test_doubles!`
 
 If you'd like to substitute multiple types at once, you can use the function-like macro. Note that this does not support providing an alternate substituted name.
 
 ```rust
 test_doubles! {
-    use ::image::ImageManager;
-    use ::texture::TextureManager;
+    use image::ImageManager;
+    use texture::TextureManager;
 }
 
 // Expands to:
 
 #[cfg(not(test))]
-use ::image::ImageManager;
+use image::ImageManager;
 #[cfg(test)]
-use ::image::ImageManagerMock as ImageManager;
+use image::ImageManagerMock as ImageManager;
 #[cfg(not(test))]
-use ::texture::TextureManager;
+use texture::TextureManager;
 #[cfg(test)]
-use ::texture::TextureManagerMock as TextureManager;
+use texture::TextureManagerMock as TextureManager;
 ```
 
 ### Limitations
 
 `test_doubles!` can't be used with:
 
-- Grouped imports, like `use blah::{foo, bar};`
-- Nested paths, like `use blah::{whatever, something::{foo, bar}};`
 - Glob imports, like `use blah::*;`

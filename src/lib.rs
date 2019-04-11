@@ -146,7 +146,7 @@ mod tests {
         let mut output = TokenStream::new();
         functionlike_internal(&input.to_string(), &mut output);
 
-        assert_eq!(expected, output);
+        assert_eq!(expected.to_string(), output.to_string());
     }
 
     #[test]
@@ -165,7 +165,7 @@ mod tests {
         let mut output = TokenStream::new();
         attribute_internal("", &input.to_string(), &mut output);
 
-        assert_eq!(expected, output);
+        assert_eq!(expected.to_string(), output.to_string());
     }
 
     #[test]
@@ -184,6 +184,6 @@ mod tests {
         let mut output = TokenStream::new();
         attribute_internal("(TokensAlternate)", &input.to_string(), &mut output);
 
-        assert_eq!(expected, output);
+        assert_eq!(expected.to_string(), output.to_string());
     }
 }

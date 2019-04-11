@@ -34,7 +34,7 @@ use ::image::ImageManager;
 use ::image::ImageManagerMock as ImageManager;
 ```
 
-If you'd like to change the subsituted name, you can do so:
+If you'd like to provide an alternate subsituted name, you can do so:
 
 ```rust
 #[test_double(IMDummy)]
@@ -51,7 +51,7 @@ use ::image::IMDummy as ImageManager;
 
 ## Substituting Multiple Types
 
-If you'd like to substitute multiple types at once, you can use the function-like macro. Note that this does not support changing the substituted name yet.
+If you'd like to substitute multiple types at once, you can use the function-like macro. Note that this does not support providing an alternate substituted name.
 
 ```rust
 test_doubles! {

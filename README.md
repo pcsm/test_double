@@ -42,6 +42,13 @@ use ::image::ImageManager;
 use ::image::IMDummy as ImageManager;
 ```
 
+### Limitations
+
+`#[test_double]` can't be used with:
+
+- Grouped imports, like `use blah::{foo, bar};`
+- Nested paths, like `use blah::{whatever, something::{foo, bar}};`
+- Glob imports, like `use blah::*;`
 
 ## Substituting Multiple Types
 
@@ -65,9 +72,9 @@ use ::texture::TextureManager;
 use ::texture::TextureManagerMock as TextureManager;
 ```
 
-## Limitations
+### Limitations
 
-Neither macro can be used with:
+`test_doubles!` can't be used with:
 
 - Grouped imports, like `use blah::{foo, bar};`
 - Nested paths, like `use blah::{whatever, something::{foo, bar}};`

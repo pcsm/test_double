@@ -1,18 +1,18 @@
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
-use quote::{quote, quote_each_token, quote_spanned, Tokens};
+use quote::*;
 
 #[proc_macro]
 pub fn test_doubles(input: TokenStream) -> TokenStream {
-    let mut output = Tokens::new();
+    let mut output = TokenStream::new();
 
     functionlike_internal(&input.to_string(), &mut output);
 
     output.into()
 }
 
-fn functionlike_internal(input: &str, output: &mut Tokens) {
+fn functionlike_internal(input: &str, output: &mut TokenStream) {
     // Generate the AST from the token stream we were given
     let file: syn::File = syn::parse_str(input).expect("Failed to parse input");
 
@@ -25,14 +25,14 @@ fn functionlike_internal(input: &str, output: &mut Tokens) {
 /// `#[test_double(ObjectDummy)]` to use `ObjectDummy`.
 #[proc_macro_attribute]
 pub fn test_double(metadata: TokenStream, input: TokenStream) -> TokenStream {
-    let mut output = Tokens::new();
+    let mut output = TokenStream::new();
 
     attribute_internal(&metadata.to_string(), &input.to_string(), &mut output);
 
     output.into()
 }
 
-fn attribute_internal(metadata: &str, input: &str, output: &mut Tokens) {
+fn attribute_internal(metadata: &str, input: &str, output: &mut TokenStream) {
     let mut alternate_ident = None;
 
     if !metadata.is_empty() {
@@ -55,7 +55,7 @@ fn attribute_internal(metadata: &str, input: &str, output: &mut Tokens) {
     process_single_item(item, alternate_ident, output);
 }
 
-fn process_single_item(item: syn::Item, alternate_ident: Option<syn::Ident>, output: &mut Tokens) {
+fn process_single_item(item: syn::Item, alternate_ident: Option<syn::Ident>, output: &mut TokenStream) {
     match item {
         syn::Item::Use(mut use_original) => {
             // Make a copy of the original use statement
@@ -71,7 +71,6 @@ fn process_single_item(item: syn::Item, alternate_ident: Option<syn::Ident>, out
                 bracket_token: Default::default(),
                 path: cfg.clone(),
                 tts: not_test.into(),
-                is_sugared_doc: false,
             };
             use_original.attrs.push(cfg_not_test);
 
@@ -83,7 +82,6 @@ fn process_single_item(item: syn::Item, alternate_ident: Option<syn::Ident>, out
                 bracket_token: Default::default(),
                 path: cfg,
                 tts: test.into(),
-                is_sugared_doc: false,
             };
             use_double.attrs.push(cfg_not_test);
 
@@ -145,7 +143,7 @@ mod tests {
             use syn::ItemMock as Item;
         };
 
-        let mut output = Tokens::new();
+        let mut output = TokenStream::new();
         functionlike_internal(&input.to_string(), &mut output);
 
         assert_eq!(expected, output);
@@ -164,7 +162,7 @@ mod tests {
             use quote::TokensMock as SomethingElse;
         };
 
-        let mut output = Tokens::new();
+        let mut output = TokenStream::new();
         attribute_internal("", &input.to_string(), &mut output);
 
         assert_eq!(expected, output);
@@ -183,7 +181,7 @@ mod tests {
             use quote::TokensAlternate as Tokens;
         };
 
-        let mut output = Tokens::new();
+        let mut output = TokenStream::new();
         attribute_internal("(TokensAlternate)", &input.to_string(), &mut output);
 
         assert_eq!(expected, output);

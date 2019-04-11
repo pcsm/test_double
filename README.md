@@ -3,12 +3,6 @@ test_double [![Crates.io](https://img.shields.io/crates/v/test_double.svg)](http
 
 A procedural macro that can swap in mock objects, dummy objects, or other test doubles only when testing.
 
-There are many limitations at present:
-
-- Does not support grouped imports, like `use blah::{foo, bar};`
-- Does not support nested paths, like `use blah::{*, something::{foo, bar}};`
-- The substituted type can't be changed when using the function-like macro
-
 To use, add the following to your `Cargo.toml`:
 
 ```toml
@@ -16,7 +10,7 @@ To use, add the following to your `Cargo.toml`:
 test_double = "0.1.1"
 ```
 
-Note that this crate has not yet reached version 1.0, so the API may change drastically between releases.
+Note that this crate has not yet reached version 1.0, so the API may change between releases.
 
 ## Substituting One Type
 
@@ -70,3 +64,11 @@ use ::texture::TextureManager;
 #[cfg(test)]
 use ::texture::TextureManagerMock as TextureManager;
 ```
+
+## Limitations
+
+Neither macro can be used with:
+
+- Grouped imports, like `use blah::{foo, bar};`
+- Nested paths, like `use blah::{whatever, something::{foo, bar}};`
+- Glob imports, like `use blah::*;`

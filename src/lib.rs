@@ -176,6 +176,25 @@ mod tests {
     }
 
     #[test]
+    fn test_functionlike_group() {
+        let input = quote! {
+            use quote::{Tokens, TokenStream};
+        };
+
+        let expected = quote! {
+            #[cfg(not(test))]
+            use quote::{Tokens, TokenStream};
+            #[cfg(test)]
+            use quote::{TokensMock as Tokens, TokenStreamMock as TokenStream};
+        };
+
+        let mut output = TokenStream::new();
+        functionlike_internal(&input.to_string(), &mut output);
+
+        assert_eq!(expected.to_string(), output.to_string());
+    }
+
+    #[test]
     fn test_attribute_rename() {
         let input = quote! {
             use quote::Tokens as SomethingElse;
@@ -209,6 +228,25 @@ mod tests {
 
         let mut output = TokenStream::new();
         attribute_internal("(TokensAlternate)", &input.to_string(), &mut output);
+
+        assert_eq!(expected.to_string(), output.to_string());
+    }
+
+    #[test]
+    fn test_attribute_group() {
+        let input = quote! {
+            use quote::{Tokens, TokenStream};
+        };
+
+        let expected = quote! {
+            #[cfg(not(test))]
+            use quote::{Tokens, TokenStream};
+            #[cfg(test)]
+            use quote::{TokensMock as Tokens, TokenStreamMock as TokenStream};
+        };
+
+        let mut output = TokenStream::new();
+        attribute_internal("", &input.to_string(), &mut output);
 
         assert_eq!(expected.to_string(), output.to_string());
     }

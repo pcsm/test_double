@@ -1,6 +1,7 @@
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
+use proc_macro2::Span;
 use quote::*;
 
 #[proc_macro]
@@ -43,7 +44,7 @@ fn attribute_internal(metadata: &str, input: &str, output: &mut TokenStream) {
             syn::Expr::Paren(expr_paren) => {
                 let inner = expr_paren.expr;
                 let inner = quote! { #inner };
-                alternate_ident = Some(syn::Ident::from(inner.to_string()));
+                alternate_ident = Some(syn::Ident::new(&inner.to_string(), Span::call_site()));
             }
             _ => panic!(error_message),
         }
@@ -61,7 +62,7 @@ fn process_single_item(item: syn::Item, alternate_ident: Option<syn::Ident>, out
             // Make a copy of the original use statement
             let mut use_double = use_original.clone();
 
-            let cfg: syn::Path = syn::Ident::from("cfg").into();
+            let cfg: syn::Path = syn::Ident::new("cfg", Span::call_site()).into();
 
             // Add `#[cfg(not(test))]` to our original use statement
             let not_test = quote! { (not(test)) };
@@ -93,7 +94,7 @@ fn process_single_item(item: syn::Item, alternate_ident: Option<syn::Ident>, out
                     // Change the imported name
                     let ident = use_path.ident;
                     let name = quote! { #ident };
-                    let default_ident = syn::Ident::from(format!("{}Mock", name));
+                    let default_ident = syn::Ident::new(&format!("{}Mock", name), Span::call_site());
                     use_path.ident = alternate_ident.unwrap_or(default_ident);
 
                     // If we don't have a rename set up already, add one back

@@ -1,11 +1,10 @@
 extern crate proc_macro;
 
-use proc_macro::TokenStream;
-use proc_macro2::Span;
+use proc_macro2::{Span, TokenStream};
 use quote::*;
 
 #[proc_macro]
-pub fn test_doubles(input: TokenStream) -> TokenStream {
+pub fn test_doubles(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let mut output = TokenStream::new();
 
     functionlike_internal(&input.to_string(), &mut output);
@@ -25,7 +24,7 @@ fn functionlike_internal(input: &str, output: &mut TokenStream) {
 /// Can be used like `#[test_double]` to use `____Mock` in tests or
 /// `#[test_double(ObjectDummy)]` to use `ObjectDummy`.
 #[proc_macro_attribute]
-pub fn test_double(metadata: TokenStream, input: TokenStream) -> TokenStream {
+pub fn test_double(metadata: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let mut output = TokenStream::new();
 
     attribute_internal(&metadata.to_string(), &input.to_string(), &mut output);

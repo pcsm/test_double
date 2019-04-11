@@ -102,12 +102,12 @@ fn process_single_item(item: syn::Item, alternate_ident: Option<syn::Ident>, out
                     if use_path.rename.is_none() {
                         use_path.rename = Some((Default::default(), ident));
                     }
-                }
+                },
                 &mut syn::UseTree::Glob(_) => {
                     panic!("test_double macros do not yet support * imports")
-                }
-                &mut syn::UseTree::List(_) => {
-                    panic!("test_double macros do not yet support imports lists")
+                },
+                &mut syn::UseTree::Group(_) => {
+                    panic!("test_double macros do not yet support imports groups")
                 }
             }
 

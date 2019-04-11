@@ -62,54 +62,8 @@ fn process_single_item(item: syn::Item, alternate_ident: Option<syn::Ident>, out
             // Make a copy of the original use statement
             let mut use_double = use_original.clone();
 
-            let cfg: syn::Path = syn::Ident::new("cfg", Span::call_site()).into();
-
-            // Add `#[cfg(not(test))]` to our original use statement
-            let not_test = quote! { (not(test)) };
-            let cfg_not_test = syn::Attribute {
-                pound_token: Default::default(),
-                style: syn::AttrStyle::Outer,
-                bracket_token: Default::default(),
-                path: cfg.clone(),
-                tts: not_test.into(),
-            };
-            use_original.attrs.push(cfg_not_test);
-
-            // Add `#[cfg(test)]` to our test double use statement
-            let test = quote! { (test) };
-            let cfg_not_test = syn::Attribute {
-                pound_token: Default::default(),
-                style: syn::AttrStyle::Outer,
-                bracket_token: Default::default(),
-                path: cfg,
-                tts: test.into(),
-            };
-            use_double.attrs.push(cfg_not_test);
-
-            // Change the name of the item used for the double use statement.
-            // `use blah::Bar` => `use blah::BarMock as Bar`
-            // `use blah::Blah as Foo` => `use blah::BlahMock as Foo`
-            match &mut use_double.tree {
-                &mut syn::UseTree::Path(ref mut use_path) => {
-                    // Change the imported name
-                    let ident = use_path.ident;
-                    let name = quote! { #ident };
-                    let default_ident = syn::Ident::new(&format!("{}Mock", name), Span::call_site());
-                    use_path.ident = alternate_ident.unwrap_or(default_ident);
-
-                    // If we don't have a rename set up already, add one back
-                    // to the original name.
-                    if use_path.rename.is_none() {
-                        use_path.rename = Some((Default::default(), ident));
-                    }
-                },
-                &mut syn::UseTree::Glob(_) => {
-                    panic!("test_double macros do not yet support * imports")
-                },
-                &mut syn::UseTree::Group(_) => {
-                    panic!("test_double macros do not yet support imports groups")
-                }
-            }
+            modify_use_for_original(&mut use_original);
+            modify_use_for_double(&mut use_double, alternate_ident);
 
             // Add the result to the back of our list of output tokens
             output.extend(quote!{
@@ -119,6 +73,61 @@ fn process_single_item(item: syn::Item, alternate_ident: Option<syn::Ident>, out
         }
         _ => panic!("Only use statements can be in the test_double! macro"),
     }
+}
+
+fn modify_use_for_original(use_original: &mut syn::ItemUse) {
+    // Add `#[cfg(not(test))]` to our original use statement
+    let not_test = quote! { (not(test)) };
+    let cfg_not_test = syn::Attribute {
+        pound_token: Default::default(),
+        style: syn::AttrStyle::Outer,
+        bracket_token: Default::default(),
+        path: create_cfg_path(),
+        tts: not_test.into(),
+    };
+    use_original.attrs.push(cfg_not_test);
+}
+
+fn modify_use_for_double(use_double: &mut syn::ItemUse, alternate_ident: Option<syn::Ident>) {
+    // Add `#[cfg(test)]` to our test double use statement
+    let test = quote! { (test) };
+    let cfg_not_test = syn::Attribute {
+        pound_token: Default::default(),
+        style: syn::AttrStyle::Outer,
+        bracket_token: Default::default(),
+        path: create_cfg_path(),
+        tts: test.into(),
+    };
+    use_double.attrs.push(cfg_not_test);
+
+    // Change the name of the item used for the double use statement.
+    // `use blah::Bar` => `use blah::BarMock as Bar`
+    // `use blah::Blah as Foo` => `use blah::BlahMock as Foo`
+    match &mut use_double.tree {
+        &mut syn::UseTree::Path(ref mut use_path) => {
+            // Change the imported name
+            let ident = use_path.ident;
+            let name = quote! { #ident };
+            let default_ident = syn::Ident::new(&format!("{}Mock", name), Span::call_site());
+            use_path.ident = alternate_ident.unwrap_or(default_ident);
+
+            // If we don't have a rename set up already, add one back
+            // to the original name.
+            if use_path.rename.is_none() {
+                use_path.rename = Some((Default::default(), ident));
+            }
+        },
+        &mut syn::UseTree::Glob(_) => {
+            panic!("test_double macros do not yet support * imports")
+        },
+        &mut syn::UseTree::Group(_) => {
+            panic!("test_double macros do not yet support imports groups")
+        }
+    }
+}
+
+fn create_cfg_path() -> syn::Path {
+    syn::Ident::new("cfg", Span::call_site()).into()
 }
 
 #[cfg(test)]

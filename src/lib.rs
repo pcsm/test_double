@@ -1,9 +1,7 @@
 extern crate proc_macro;
-#[macro_use]
-extern crate quote;
 
 use proc_macro::TokenStream;
-use quote::Tokens;
+use quote::{quote, quote_each_token, quote_spanned, Tokens};
 
 #[proc_macro]
 pub fn test_doubles(input: TokenStream) -> TokenStream {

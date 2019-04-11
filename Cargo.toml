@@ -8,6 +8,7 @@ categories = ["development-tools::testing"]
 readme = "README.md"
 repository = "https://github.com/pcsm/test_double"
 license = "MIT OR Apache-2.0"
+edition = "2018"
 
 [badges]
 maintenance = { status = "experimental" }

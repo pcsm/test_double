@@ -1,6 +1,6 @@
 [package]
 name = "test_double"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["Jason Grlicky <jason@paracosm.us>"]
 description = "Procedural macro for substituting one type for another when testing."
 keywords = ["mock", "test", "testing", "TDD"]
@@ -11,7 +11,7 @@ license = "MIT OR Apache-2.0"
 edition = "2018"
 
 [badges]
-maintenance = { status = "experimental" }
+maintenance = { status = "actively-developed" }
 
 [dependencies]
 syn = { version = "0.15", features = ["full"] }

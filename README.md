@@ -7,7 +7,7 @@ To use, add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-test_double = "0.1.1"
+test_double = "0.2.0"
 ```
 
 Note that this crate has not yet reached version 1.0, so the API may change between releases.

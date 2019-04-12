@@ -1,24 +1,18 @@
-#![feature(proc_macro)]
-
 extern crate proc_macro;
-extern crate proc_macro2;
-extern crate syn;
-#[macro_use]
-extern crate quote;
 
-use proc_macro::TokenStream;
-use quote::Tokens;
+use proc_macro2::{Span, TokenStream};
+use quote::quote;
 
 #[proc_macro]
-pub fn test_doubles(input: TokenStream) -> TokenStream {
-    let mut output = Tokens::new();
+pub fn test_doubles(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let mut output = TokenStream::new();
 
     functionlike_internal(&input.to_string(), &mut output);
 
     output.into()
 }
 
-fn functionlike_internal(input: &str, output: &mut Tokens) {
+fn functionlike_internal(input: &str, output: &mut TokenStream) {
     // Generate the AST from the token stream we were given
     let file: syn::File = syn::parse_str(input).expect("Failed to parse input");
 
@@ -30,15 +24,15 @@ fn functionlike_internal(input: &str, output: &mut Tokens) {
 /// Can be used like `#[test_double]` to use `____Mock` in tests or
 /// `#[test_double(ObjectDummy)]` to use `ObjectDummy`.
 #[proc_macro_attribute]
-pub fn test_double(metadata: TokenStream, input: TokenStream) -> TokenStream {
-    let mut output = Tokens::new();
+pub fn test_double(metadata: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let mut output = TokenStream::new();
 
     attribute_internal(&metadata.to_string(), &input.to_string(), &mut output);
 
     output.into()
 }
 
-fn attribute_internal(metadata: &str, input: &str, output: &mut Tokens) {
+fn attribute_internal(metadata: &str, input: &str, output: &mut TokenStream) {
     let mut alternate_ident = None;
 
     if !metadata.is_empty() {
@@ -49,7 +43,7 @@ fn attribute_internal(metadata: &str, input: &str, output: &mut Tokens) {
             syn::Expr::Paren(expr_paren) => {
                 let inner = expr_paren.expr;
                 let inner = quote! { #inner };
-                alternate_ident = Some(syn::Ident::from(inner.to_string()));
+                alternate_ident = Some(syn::Ident::new(&inner.to_string(), Span::call_site()));
             }
             _ => panic!(error_message),
         }
@@ -61,71 +55,101 @@ fn attribute_internal(metadata: &str, input: &str, output: &mut Tokens) {
     process_single_item(item, alternate_ident, output);
 }
 
-fn process_single_item(item: syn::Item, alternate_ident: Option<syn::Ident>, output: &mut Tokens) {
+fn process_single_item(item: syn::Item, alternate_ident: Option<syn::Ident>, output: &mut TokenStream) {
     match item {
         syn::Item::Use(mut use_original) => {
             // Make a copy of the original use statement
             let mut use_double = use_original.clone();
 
-            let cfg: syn::Path = syn::Ident::from("cfg").into();
-
-            // Add `#[cfg(not(test))]` to our original use statement
-            let not_test = quote! { (not(test)) };
-            let cfg_not_test = syn::Attribute {
-                pound_token: Default::default(),
-                style: syn::AttrStyle::Outer,
-                bracket_token: Default::default(),
-                path: cfg.clone(),
-                tts: not_test.into(),
-                is_sugared_doc: false,
-            };
-            use_original.attrs.push(cfg_not_test);
-
-            // Add `#[cfg(test)]` to our test double use statement
-            let test = quote! { (test) };
-            let cfg_not_test = syn::Attribute {
-                pound_token: Default::default(),
-                style: syn::AttrStyle::Outer,
-                bracket_token: Default::default(),
-                path: cfg,
-                tts: test.into(),
-                is_sugared_doc: false,
-            };
-            use_double.attrs.push(cfg_not_test);
-
-            // Change the name of the item used for the double use statement.
-            // `use blah::Bar` => `use blah::BarMock as Bar`
-            // `use blah::Blah as Foo` => `use blah::BlahMock as Foo`
-            match &mut use_double.tree {
-                &mut syn::UseTree::Path(ref mut use_path) => {
-                    // Change the imported name
-                    let ident = use_path.ident;
-                    let name = quote! { #ident };
-                    let default_ident = syn::Ident::from(format!("{}Mock", name));
-                    use_path.ident = alternate_ident.unwrap_or(default_ident);
-
-                    // If we don't have a rename set up already, add one back
-                    // to the original name.
-                    if use_path.rename.is_none() {
-                        use_path.rename = Some((Default::default(), ident));
-                    }
-                }
-                &mut syn::UseTree::Glob(_) => {
-                    panic!("test_double macros do not yet support * imports")
-                }
-                &mut syn::UseTree::List(_) => {
-                    panic!("test_double macros do not yet support imports lists")
-                }
-            }
+            modify_use_for_original(&mut use_original);
+            modify_use_for_double(&mut use_double, alternate_ident);
 
             // Add the result to the back of our list of output tokens
-            output.append_all(quote!{
+            output.extend::<TokenStream>(quote!{
                 #use_original
                 #use_double
-            });
+            }.into());
         }
         _ => panic!("Only use statements can be in the test_double! macro"),
     }
+}
+
+fn modify_use_for_original(use_original: &mut syn::ItemUse) {
+    // Add `#[cfg(not(test))]` to our original use statement
+    let not_test = quote! { (not(test)) };
+    let cfg_not_test = syn::Attribute {
+        pound_token: Default::default(),
+        style: syn::AttrStyle::Outer,
+        bracket_token: Default::default(),
+        path: create_cfg_path(),
+        tts: not_test.into(),
+    };
+    use_original.attrs.push(cfg_not_test);
+}
+
+fn modify_use_for_double(use_double: &mut syn::ItemUse, alternate_ident: Option<syn::Ident>) {
+    // Add `#[cfg(test)]` to our test double use statement
+    let test = quote! { (test) };
+    let cfg_not_test = syn::Attribute {
+        pound_token: Default::default(),
+        style: syn::AttrStyle::Outer,
+        bracket_token: Default::default(),
+        path: create_cfg_path(),
+        tts: test.into(),
+    };
+    use_double.attrs.push(cfg_not_test);
+
+    modify_tree_for_double(&mut use_double.tree, alternate_ident);
+}
+
+// Change the name of the item used for the double use statement.
+fn modify_tree_for_double(use_tree: &mut syn::UseTree, alternate_ident: Option<syn::Ident>) {
+    match use_tree {
+        syn::UseTree::Path(use_path) => {
+            modify_tree_for_double(&mut use_path.tree, alternate_ident)
+        },
+        syn::UseTree::Group(use_group) => {
+            if alternate_ident.is_some() {
+                panic!("test_double macros do not support using alternate substituted types with grouped imports")
+            }
+
+            for tree in use_group.items.iter_mut() {
+                modify_tree_for_double(tree, None)
+            }
+        },
+        syn::UseTree::Name(use_name) => {
+            // Change the imported name and add an "as" also
+            // `use blah::Bar` => `use blah::BarMock as Bar`
+            let original_ident = use_name.ident.clone();
+            let default_ident = create_default_ident_for_double(&original_ident);
+            let modified_ident = alternate_ident.unwrap_or(default_ident);
+
+            let rename = syn::UseRename {
+                ident: modified_ident,
+                as_token: syn::token::As(Span::call_site()),
+                rename: original_ident
+            };
+            *use_tree = syn::UseTree::Rename(rename);
+        },
+        syn::UseTree::Rename(use_rename) => {
+            // Change the imported name
+            // `use blah::Blah as Foo` => `use blah::BlahMock as Foo`
+            let default_ident = create_default_ident_for_double(&use_rename.ident);
+            use_rename.ident = alternate_ident.unwrap_or(default_ident);
+        },
+        syn::UseTree::Glob(_) => {
+            panic!("test_double macros do not support * imports")
+        },
+    }
+}
+
+fn create_default_ident_for_double(original_ident: &syn::Ident) -> syn::Ident {
+    let name = quote! { #original_ident };
+    syn::Ident::new(&format!("{}Mock", name), Span::call_site())
+}
+
+fn create_cfg_path() -> syn::Path {
+    syn::Ident::new("cfg", Span::call_site()).into()
 }
 
 #[cfg(test)]
@@ -151,10 +175,29 @@ mod tests {
             use syn::ItemMock as Item;
         };
 
-        let mut output = Tokens::new();
+        let mut output = TokenStream::new();
         functionlike_internal(&input.to_string(), &mut output);
 
-        assert_eq!(expected, output);
+        assert_eq!(expected.to_string(), output.to_string());
+    }
+
+    #[test]
+    fn test_functionlike_group() {
+        let input = quote! {
+            use quote::{Tokens, TokenStream};
+        };
+
+        let expected = quote! {
+            #[cfg(not(test))]
+            use quote::{Tokens, TokenStream};
+            #[cfg(test)]
+            use quote::{TokensMock as Tokens, TokenStreamMock as TokenStream};
+        };
+
+        let mut output = TokenStream::new();
+        functionlike_internal(&input.to_string(), &mut output);
+
+        assert_eq!(expected.to_string(), output.to_string());
     }
 
     #[test]
@@ -170,10 +213,48 @@ mod tests {
             use quote::TokensMock as SomethingElse;
         };
 
-        let mut output = Tokens::new();
+        let mut output = TokenStream::new();
         attribute_internal("", &input.to_string(), &mut output);
 
-        assert_eq!(expected, output);
+        assert_eq!(expected.to_string(), output.to_string());
+    }
+
+    #[test]
+    fn test_attribute_group() {
+        let input = quote! {
+            use quote::{Tokens, TokenStream};
+        };
+
+        let expected = quote! {
+            #[cfg(not(test))]
+            use quote::{Tokens, TokenStream};
+            #[cfg(test)]
+            use quote::{TokensMock as Tokens, TokenStreamMock as TokenStream};
+        };
+
+        let mut output = TokenStream::new();
+        attribute_internal("", &input.to_string(), &mut output);
+
+        assert_eq!(expected.to_string(), output.to_string());
+    }
+
+    #[test]
+    fn test_attribute_nested() {
+        let input = quote! {
+            use std::{fs::File, io::Read, path::{Path, PathBuf}};
+        };
+
+        let expected = quote! {
+            #[cfg(not(test))]
+            use std::{fs::File, io::Read, path::{Path, PathBuf}};
+            #[cfg(test)]
+            use std::{fs::FileMock as File, io::ReadMock as Read, path::{PathMock as Path, PathBufMock as PathBuf}};
+        };
+
+        let mut output = TokenStream::new();
+        attribute_internal("", &input.to_string(), &mut output);
+
+        assert_eq!(expected.to_string(), output.to_string());
     }
 
     #[test]
@@ -189,9 +270,21 @@ mod tests {
             use quote::TokensAlternate as Tokens;
         };
 
-        let mut output = Tokens::new();
+        let mut output = TokenStream::new();
         attribute_internal("(TokensAlternate)", &input.to_string(), &mut output);
 
-        assert_eq!(expected, output);
+        assert_eq!(expected.to_string(), output.to_string());
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_attribute_group_alternate_name() {
+        let input = quote! {
+            use quote::{Tokens, TokenStream};
+        };
+
+        let mut output = TokenStream::new();
+        attribute_internal("(TokensAlternate)", &input.to_string(), &mut output);
+        // Panic: alternate names can't be used with import groups
     }
 }

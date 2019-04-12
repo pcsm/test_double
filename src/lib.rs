@@ -1,7 +1,7 @@
 extern crate proc_macro;
 
 use proc_macro2::{Span, TokenStream};
-use quote::*;
+use quote::quote;
 
 #[proc_macro]
 pub fn test_doubles(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -108,6 +108,15 @@ fn modify_tree_for_double(use_tree: &mut syn::UseTree, alternate_ident: Option<s
         syn::UseTree::Path(use_path) => {
             modify_tree_for_double(&mut use_path.tree, alternate_ident)
         },
+        syn::UseTree::Group(use_group) => {
+            if alternate_ident.is_some() {
+                panic!("test_double macros do not support using alternate substituted types with grouped imports")
+            }
+
+            for tree in use_group.items.iter_mut() {
+                modify_tree_for_double(tree, None)
+            }
+        },
         syn::UseTree::Name(use_name) => {
             // Change the imported name and add an "as" also
             // `use blah::Bar` => `use blah::BarMock as Bar`
@@ -129,10 +138,7 @@ fn modify_tree_for_double(use_tree: &mut syn::UseTree, alternate_ident: Option<s
             use_rename.ident = alternate_ident.unwrap_or(default_ident);
         },
         syn::UseTree::Glob(_) => {
-            panic!("test_double macros do not yet support * imports")
-        },
-        syn::UseTree::Group(_) => {
-            panic!("test_double macros do not yet support imports groups")
+            panic!("test_double macros do not support * imports")
         },
     }
 }
@@ -176,6 +182,25 @@ mod tests {
     }
 
     #[test]
+    fn test_functionlike_group() {
+        let input = quote! {
+            use quote::{Tokens, TokenStream};
+        };
+
+        let expected = quote! {
+            #[cfg(not(test))]
+            use quote::{Tokens, TokenStream};
+            #[cfg(test)]
+            use quote::{TokensMock as Tokens, TokenStreamMock as TokenStream};
+        };
+
+        let mut output = TokenStream::new();
+        functionlike_internal(&input.to_string(), &mut output);
+
+        assert_eq!(expected.to_string(), output.to_string());
+    }
+
+    #[test]
     fn test_attribute_rename() {
         let input = quote! {
             use quote::Tokens as SomethingElse;
@@ -186,6 +211,44 @@ mod tests {
             use quote::Tokens as SomethingElse;
             #[cfg(test)]
             use quote::TokensMock as SomethingElse;
+        };
+
+        let mut output = TokenStream::new();
+        attribute_internal("", &input.to_string(), &mut output);
+
+        assert_eq!(expected.to_string(), output.to_string());
+    }
+
+    #[test]
+    fn test_attribute_group() {
+        let input = quote! {
+            use quote::{Tokens, TokenStream};
+        };
+
+        let expected = quote! {
+            #[cfg(not(test))]
+            use quote::{Tokens, TokenStream};
+            #[cfg(test)]
+            use quote::{TokensMock as Tokens, TokenStreamMock as TokenStream};
+        };
+
+        let mut output = TokenStream::new();
+        attribute_internal("", &input.to_string(), &mut output);
+
+        assert_eq!(expected.to_string(), output.to_string());
+    }
+
+    #[test]
+    fn test_attribute_nested() {
+        let input = quote! {
+            use std::{fs::File, io::Read, path::{Path, PathBuf}};
+        };
+
+        let expected = quote! {
+            #[cfg(not(test))]
+            use std::{fs::File, io::Read, path::{Path, PathBuf}};
+            #[cfg(test)]
+            use std::{fs::FileMock as File, io::ReadMock as Read, path::{PathMock as Path, PathBufMock as PathBuf}};
         };
 
         let mut output = TokenStream::new();
@@ -211,5 +274,17 @@ mod tests {
         attribute_internal("(TokensAlternate)", &input.to_string(), &mut output);
 
         assert_eq!(expected.to_string(), output.to_string());
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_attribute_group_alternate_name() {
+        let input = quote! {
+            use quote::{Tokens, TokenStream};
+        };
+
+        let mut output = TokenStream::new();
+        attribute_internal("(TokensAlternate)", &input.to_string(), &mut output);
+        // Panic: alternate names can't be used with import groups
     }
 }

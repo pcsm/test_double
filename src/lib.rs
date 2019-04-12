@@ -239,6 +239,25 @@ mod tests {
     }
 
     #[test]
+    fn test_attribute_nested() {
+        let input = quote! {
+            use std::{fs::File, io::Read, path::{Path, PathBuf}};
+        };
+
+        let expected = quote! {
+            #[cfg(not(test))]
+            use std::{fs::File, io::Read, path::{Path, PathBuf}};
+            #[cfg(test)]
+            use std::{fs::FileMock as File, io::ReadMock as Read, path::{PathMock as Path, PathBufMock as PathBuf}};
+        };
+
+        let mut output = TokenStream::new();
+        attribute_internal("", &input.to_string(), &mut output);
+
+        assert_eq!(expected.to_string(), output.to_string());
+    }
+
+    #[test]
     fn test_attribute_alternate_name() {
         let input = quote! {
             use quote::Tokens;

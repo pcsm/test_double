@@ -11,7 +11,7 @@ license = "MIT OR Apache-2.0"
 edition = "2018"
 
 [badges]
-maintenance = { status = "experimental" }
+maintenance = { status = "actively-developed" }
 
 [dependencies]
 syn = { version = "0.15", features = ["full"] }

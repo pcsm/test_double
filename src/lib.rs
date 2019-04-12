@@ -109,6 +109,10 @@ fn modify_tree_for_double(use_tree: &mut syn::UseTree, alternate_ident: Option<s
             modify_tree_for_double(&mut use_path.tree, alternate_ident)
         },
         syn::UseTree::Group(use_group) => {
+            if alternate_ident.is_some() {
+                panic!("test_double macros do not support using alternate substituted types with grouped imports")
+            }
+
             for tree in use_group.items.iter_mut() {
                 modify_tree_for_double(tree, None)
             }
@@ -255,7 +259,6 @@ mod tests {
 
     #[test]
     #[should_panic]
-    #[ignore]
     fn test_attribute_group_alternate_name() {
         let input = quote! {
             use quote::{Tokens, TokenStream};

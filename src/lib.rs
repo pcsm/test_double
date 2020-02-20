@@ -143,9 +143,16 @@ fn modify_tree_for_double(use_tree: &mut syn::UseTree, alternate_ident: Option<s
     }
 }
 
+#[cfg(not(feature = "prefix-mock"))]
 fn create_default_ident_for_double(original_ident: &syn::Ident) -> syn::Ident {
     let name = quote! { #original_ident };
     syn::Ident::new(&format!("{}Mock", name), Span::call_site())
+}
+
+#[cfg(feature = "prefix-mock")]
+fn create_default_ident_for_double(original_ident: &syn::Ident) -> syn::Ident {
+    let name = quote! { #original_ident };
+    syn::Ident::new(&format!("Mock{}", name), Span::call_site())
 }
 
 fn create_cfg_path() -> syn::Path {
@@ -156,6 +163,7 @@ fn create_cfg_path() -> syn::Path {
 mod tests {
     use super::*;
 
+    #[cfg(not(feature = "prefix-mock"))]
     #[test]
     fn test_functionlike_basic() {
         let input = quote! {
@@ -181,6 +189,33 @@ mod tests {
         assert_eq!(expected.to_string(), output.to_string());
     }
 
+    #[cfg(feature = "prefix-mock")]
+    #[test]
+    fn test_functionlike_basic() {
+        let input = quote! {
+            use quote::Tokens;
+            use syn::Item;
+        };
+
+        let expected = quote! {
+            #[cfg(not(test))]
+            use quote::Tokens;
+            #[cfg(test)]
+            use quote::MockTokens as Tokens;
+
+            #[cfg(not(test))]
+            use syn::Item;
+            #[cfg(test)]
+            use syn::MockItem as Item;
+        };
+
+        let mut output = TokenStream::new();
+        functionlike_internal(&input.to_string(), &mut output);
+
+        assert_eq!(expected.to_string(), output.to_string());
+    }
+
+    #[cfg(not(feature = "prefix-mock"))]
     #[test]
     fn test_functionlike_group() {
         let input = quote! {
@@ -200,6 +235,27 @@ mod tests {
         assert_eq!(expected.to_string(), output.to_string());
     }
 
+    #[cfg(feature = "prefix-mock")]
+    #[test]
+    fn test_functionlike_group() {
+        let input = quote! {
+            use quote::{Tokens, TokenStream};
+        };
+
+        let expected = quote! {
+            #[cfg(not(test))]
+            use quote::{Tokens, TokenStream};
+            #[cfg(test)]
+            use quote::{MockTokens as Tokens, MockTokenStream as TokenStream};
+        };
+
+        let mut output = TokenStream::new();
+        functionlike_internal(&input.to_string(), &mut output);
+
+        assert_eq!(expected.to_string(), output.to_string());
+    }
+
+    #[cfg(not(feature = "prefix-mock"))]
     #[test]
     fn test_attribute_rename() {
         let input = quote! {
@@ -219,6 +275,27 @@ mod tests {
         assert_eq!(expected.to_string(), output.to_string());
     }
 
+    #[cfg(feature = "prefix-mock")]
+    #[test]
+    fn test_attribute_rename() {
+        let input = quote! {
+            use quote::Tokens as SomethingElse;
+        };
+
+        let expected = quote! {
+            #[cfg(not(test))]
+            use quote::Tokens as SomethingElse;
+            #[cfg(test)]
+            use quote::MockTokens as SomethingElse;
+        };
+
+        let mut output = TokenStream::new();
+        attribute_internal("", &input.to_string(), &mut output);
+
+        assert_eq!(expected.to_string(), output.to_string());
+    }
+
+    #[cfg(not(feature = "prefix-mock"))]
     #[test]
     fn test_attribute_group() {
         let input = quote! {
@@ -238,6 +315,27 @@ mod tests {
         assert_eq!(expected.to_string(), output.to_string());
     }
 
+    #[cfg(feature = "prefix-mock")]
+    #[test]
+    fn test_attribute_group() {
+        let input = quote! {
+            use quote::{Tokens, TokenStream};
+        };
+
+        let expected = quote! {
+            #[cfg(not(test))]
+            use quote::{Tokens, TokenStream};
+            #[cfg(test)]
+            use quote::{MockTokens as Tokens, MockTokenStream as TokenStream};
+        };
+
+        let mut output = TokenStream::new();
+        attribute_internal("", &input.to_string(), &mut output);
+
+        assert_eq!(expected.to_string(), output.to_string());
+    }
+
+    #[cfg(not(feature = "prefix-mock"))]
     #[test]
     fn test_attribute_nested() {
         let input = quote! {
@@ -249,6 +347,26 @@ mod tests {
             use std::{fs::File, io::Read, path::{Path, PathBuf}};
             #[cfg(test)]
             use std::{fs::FileMock as File, io::ReadMock as Read, path::{PathMock as Path, PathBufMock as PathBuf}};
+        };
+
+        let mut output = TokenStream::new();
+        attribute_internal("", &input.to_string(), &mut output);
+
+        assert_eq!(expected.to_string(), output.to_string());
+    }
+
+    #[cfg(feature = "prefix-mock")]
+    #[test]
+    fn test_attribute_nested() {
+        let input = quote! {
+            use std::{fs::File, io::Read, path::{Path, PathBuf}};
+        };
+
+        let expected = quote! {
+            #[cfg(not(test))]
+            use std::{fs::File, io::Read, path::{Path, PathBuf}};
+            #[cfg(test)]
+            use std::{fs::MockFile as File, io::MockRead as Read, path::{MockPath as Path, MockPathBuf as PathBuf}};
         };
 
         let mut output = TokenStream::new();

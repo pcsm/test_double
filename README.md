@@ -7,7 +7,7 @@ To use, add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-test_double = "0.2.0"
+test_double = "0.2.1"
 ```
 
 Note that this crate has not yet reached version 1.0, so the API may change between releases.
@@ -28,7 +28,7 @@ use image::ImageManager;
 use image::ImageManagerMock as ImageManager;
 ```
 
-If you'd like to provide an alternate subsituted name, you can do so:
+If you'd like to provide an alternate substituted name, you can do so:
 
 ```rust
 #[test_double(IMDummy)]
@@ -76,3 +76,17 @@ use texture::TextureManagerMock as TextureManager;
 `test_doubles!` can't be used with:
 
 - Glob imports, like `use blah::*;`
+
+## Features
+
+
+### prefix-mock
+
+For crates such as [mockall](https://github.com/asomers/mockall) that prefix the "Mock" name
+addition, there's the feature `prefix-mock`.
+
+Just enable it in your `Cargo.toml` like so:
+
+```toml
+test_double = { version = "0.2.1", features = ["prefix-mock"] }
+```

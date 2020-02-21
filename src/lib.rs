@@ -36,18 +36,29 @@ fn functionlike_internal(input: &str, output: &mut TokenStream, renaming_mode: R
     }
 }
 
-/// Can be used like `#[test_double]` to use `____Mock` in tests or
+/// Can be used like `#[test_double]` to use `Mock____` in tests or
 /// `#[test_double(ObjectDummy)]` to use `ObjectDummy`.
 #[proc_macro_attribute]
 pub fn test_double(metadata: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let mut output = TokenStream::new();
 
-    attribute_internal(&metadata.to_string(), &input.to_string(), &mut output);
+    attribute_internal(&metadata.to_string(), &input.to_string(), &mut output, RenamingMode::Append);
 
     output.into()
 }
 
-fn attribute_internal(metadata: &str, input: &str, output: &mut TokenStream) {
+/// Can be used like `#[test_double_prefixed]` to use `____Mock` in tests or
+/// `#[test_double_prefixed(ObjectDummy)]` to use `ObjectDummy`.
+#[proc_macro_attribute]
+pub fn test_double_prefixed(metadata: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let mut output = TokenStream::new();
+
+    attribute_internal(&metadata.to_string(), &input.to_string(), &mut output, RenamingMode::Prefix);
+
+    output.into()
+}
+
+fn attribute_internal(metadata: &str, input: &str, output: &mut TokenStream, renaming_mode: RenamingMode) {
     let mut alternate_ident = None;
 
     if !metadata.is_empty() {
@@ -67,7 +78,7 @@ fn attribute_internal(metadata: &str, input: &str, output: &mut TokenStream) {
     // Generate the AST from the token stream we were given
     let item: syn::Item = syn::parse_str(input).expect("Failed to parse input");
 
-    process_single_item(item, alternate_ident, output, RenamingMode::Append);
+    process_single_item(item, alternate_ident, output, renaming_mode);
 }
 
 fn process_single_item(item: syn::Item, alternate_ident: Option<syn::Ident>, output: &mut TokenStream, renaming_mode: RenamingMode) {
@@ -277,7 +288,26 @@ mod tests {
         };
 
         let mut output = TokenStream::new();
-        attribute_internal("", &input.to_string(), &mut output);
+        attribute_internal("", &input.to_string(), &mut output, RenamingMode::Append);
+
+        assert_eq!(expected.to_string(), output.to_string());
+    }
+
+    #[test]
+    fn test_attribute_rename_prefixed() {
+        let input = quote! {
+            use quote::Tokens as SomethingElse;
+        };
+
+        let expected = quote! {
+            #[cfg(not(test))]
+            use quote::Tokens as SomethingElse;
+            #[cfg(test)]
+            use quote::MockTokens as SomethingElse;
+        };
+
+        let mut output = TokenStream::new();
+        attribute_internal("", &input.to_string(), &mut output, RenamingMode::Prefix);
 
         assert_eq!(expected.to_string(), output.to_string());
     }
@@ -296,7 +326,26 @@ mod tests {
         };
 
         let mut output = TokenStream::new();
-        attribute_internal("", &input.to_string(), &mut output);
+        attribute_internal("", &input.to_string(), &mut output, RenamingMode::Append);
+
+        assert_eq!(expected.to_string(), output.to_string());
+    }
+
+    #[test]
+    fn test_attribute_group_prefixed() {
+        let input = quote! {
+            use quote::{Tokens, TokenStream};
+        };
+
+        let expected = quote! {
+            #[cfg(not(test))]
+            use quote::{Tokens, TokenStream};
+            #[cfg(test)]
+            use quote::{MockTokens as Tokens, MockTokenStream as TokenStream};
+        };
+
+        let mut output = TokenStream::new();
+        attribute_internal("", &input.to_string(), &mut output, RenamingMode::Prefix);
 
         assert_eq!(expected.to_string(), output.to_string());
     }
@@ -315,7 +364,26 @@ mod tests {
         };
 
         let mut output = TokenStream::new();
-        attribute_internal("", &input.to_string(), &mut output);
+        attribute_internal("", &input.to_string(), &mut output, RenamingMode::Append);
+
+        assert_eq!(expected.to_string(), output.to_string());
+    }
+
+    #[test]
+    fn test_attribute_nested_prefixed() {
+        let input = quote! {
+            use std::{fs::File, io::Read, path::{Path, PathBuf}};
+        };
+
+        let expected = quote! {
+            #[cfg(not(test))]
+            use std::{fs::File, io::Read, path::{Path, PathBuf}};
+            #[cfg(test)]
+            use std::{fs::MockFile as File, io::MockRead as Read, path::{MockPath as Path, MockPathBuf as PathBuf}};
+        };
+
+        let mut output = TokenStream::new();
+        attribute_internal("", &input.to_string(), &mut output, RenamingMode::Prefix);
 
         assert_eq!(expected.to_string(), output.to_string());
     }
@@ -334,7 +402,26 @@ mod tests {
         };
 
         let mut output = TokenStream::new();
-        attribute_internal("(TokensAlternate)", &input.to_string(), &mut output);
+        attribute_internal("(TokensAlternate)", &input.to_string(), &mut output, RenamingMode::Append);
+
+        assert_eq!(expected.to_string(), output.to_string());
+    }
+
+    #[test]
+    fn test_attribute_alternate_name_prefixed() {
+        let input = quote! {
+            use quote::Tokens;
+        };
+
+        let expected = quote! {
+            #[cfg(not(test))]
+            use quote::Tokens;
+            #[cfg(test)]
+            use quote::TokensAlternate as Tokens;
+        };
+
+        let mut output = TokenStream::new();
+        attribute_internal("(TokensAlternate)", &input.to_string(), &mut output, RenamingMode::Prefix);
 
         assert_eq!(expected.to_string(), output.to_string());
     }
@@ -347,7 +434,7 @@ mod tests {
         };
 
         let mut output = TokenStream::new();
-        attribute_internal("(TokensAlternate)", &input.to_string(), &mut output);
+        attribute_internal("(TokensAlternate)", &input.to_string(), &mut output, RenamingMode::Append);
         // Panic: alternate names can't be used with import groups
     }
 }

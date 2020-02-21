@@ -107,5 +107,10 @@ mod prefixed {
     }
 }
 
-
+#[test]
+fn test_integration() {
+    // If it compiles, it passes, but this is just here so it shows up when you
+    // run `cargo test`
+    assert!(true);
+}
 

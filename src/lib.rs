@@ -6,18 +6,14 @@ use quote::quote;
 #[proc_macro]
 pub fn test_doubles(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let mut output = TokenStream::new();
-
     functionlike_internal(&input.to_string(), &mut output, RenamingMode::Append);
-
     output.into()
 }
 
 #[proc_macro]
 pub fn test_doubles_prefixed(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let mut output = TokenStream::new();
-
     functionlike_internal(&input.to_string(), &mut output, RenamingMode::Prefix);
-
     output.into()
 }
 
@@ -41,9 +37,7 @@ fn functionlike_internal(input: &str, output: &mut TokenStream, renaming_mode: R
 #[proc_macro_attribute]
 pub fn test_double(metadata: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let mut output = TokenStream::new();
-
     attribute_internal(&metadata.to_string(), &input.to_string(), &mut output, RenamingMode::Append);
-
     output.into()
 }
 
@@ -52,9 +46,7 @@ pub fn test_double(metadata: proc_macro::TokenStream, input: proc_macro::TokenSt
 #[proc_macro_attribute]
 pub fn test_double_prefixed(metadata: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let mut output = TokenStream::new();
-
     attribute_internal(&metadata.to_string(), &input.to_string(), &mut output, RenamingMode::Prefix);
-
     output.into()
 }
 

@@ -3,6 +3,8 @@ test_double [![Crates.io](https://img.shields.io/crates/v/test_double.svg)](http
 
 A set of procedural macros that can swap in mock objects, dummy objects, or other test doubles only when testing.
 
+This doesn't solve the problem of mocking in the first place, [which is worth looking into](https://asomers.github.io/mock_shootout/), but it does allow you to import mock objects into your tests easily.
+
 To use, add the following to your `Cargo.toml`:
 
 ```toml
@@ -12,20 +14,20 @@ test_double = "0.2.0"
 
 Note that this crate has not yet reached version 1.0, so the API may change between releases.
 
-## Substituting A Single Type
+## Substituting A Single Use Statement
 
 `#[test_double]` can be used to substitute one type for another when testing:
 
 ```rust
 #[test_double]
-use image::ImageManager;
+use db::Database;
 
 // Expands to:
 
 #[cfg(not(test))]
-use image::ImageManager;
+use db::Database;
 #[cfg(test)]
-use image::ImageManagerMock as ImageManager;
+use db::DatabaseMock as Database;
 ```
 
 The substituted type name defaults to the original name, with `Mock` appended to it.
@@ -35,16 +37,18 @@ The substituted type name defaults to the original name, with `Mock` appended to
 You can also provide an alternate name to be substituted instead:
 
 ```rust
-#[test_double(IMDummy)]
-use image::ImageManager;
+#[test_double(DummyDB)]
+use db::Database;
 
 // Expands to:
 
 #[cfg(not(test))]
-use image::ImageManager;
+use db::Database;
 #[cfg(test)]
-use image::IMDummy as ImageManager;
+use db::DummyDB as Database;
 ```
+
+Note that this is only supported when substituting a single type name.
 
 ### Prefixed
 
@@ -52,69 +56,100 @@ As a shortcut, if you would like to use the original type name, _prefixed_ with 
 
 ```rust
 #[test_double_prefixed]
-use image::ImageManager;
+use db::Database;
 
 // Expands to:
 
 #[cfg(not(test))]
-use image::ImageManager;
+use db::Database;
 #[cfg(test)]
-use image::MockImageManager as ImageManager;
+use db::MockDatabase as Database;
+```
+
+### Grouped Imports
+
+It's worth noting that these macros also support grouped imports:
+
+
+```rust
+#[test_double]
+use db::{
+    Database,
+    Connection
+};
+
+// Expands to:
+
+#[cfg(not(test))]
+use db::Database;
+#[cfg(test)]
+use db::DatabaseMock as Database;
+#[cfg(not(test))]
+use db::Connection;
+#[cfg(test)]
+use db::ConnectionMock as Connection;
 ```
 
 ### Limitations 
 
-`#[test_double]` and `#[test_double_prefixed]` do not support:
+For `#[test_doubles]` and `#[test_doubles_prefixed]`:
 
-- Glob imports, like `use blah::*;`
-- When providing an alternate substituted name, grouped imports, such as `use blah::{foo, bar};`
+- Glob imports, such as `use blah::*;`, are not supported
+- When providing an alternate substituted name, grouped imports, such as `use blah::{foo, bar};`, are not supported
 
-## Substituting Multiple Types
+## Substituting Multiple Use Statements
 
-If you'd like to substitute multiple types at once, you can use the `test_doubles!` macro. Note that this does not support providing an alternate substituted name.
+If you'd like to substitute multiple use statements at once, you can use the `test_doubles!` macro. Note that this macro does not support using an alternate substituted name, but it does support grouped imports, such as `use blah::{foo, bar};`.
 
 ```rust
 test_doubles! {
-    use image::ImageManager;
-    use texture::TextureManager;
+    use db::{
+        Database, 
+        Connection
+    };
+    use image::ImageCache;
 }
 
 // Expands to:
 
 #[cfg(not(test))]
-use image::ImageManager;
+use db::Database;
 #[cfg(test)]
-use image::ImageManagerMock as ImageManager;
+use db::DatabaseMock as Database;
 #[cfg(not(test))]
-use texture::TextureManager;
+use db::Connection;
 #[cfg(test)]
-use texture::TextureManagerMock as TextureManager;
+use db::ConnectionMock as Connection;
+#[cfg(not(test))]
+use image::ImageCache;
+#[cfg(test)]
+use image::ImageCacheMock as ImageCache;
 ```
 
 ### Prefixed
 
-Similar to the single-type macros, there is a `test_doubles_prefixed!` macro that can prefix instead of appending:
+Similar to the single-use-statement macros, there is a `test_doubles_prefixed!` macro that can prefix instead of appending:
 
 ```rust
 test_doubles_prefixed! {
-    use image::ImageManager;
-    use texture::TextureManager;
+    use db::Database;
+    use image::ImageCache;
 }
 
 // Expands to:
 
 #[cfg(not(test))]
-use image::ImageManager;
+use db::Database;
 #[cfg(test)]
-use image::MockImageManager as ImageManager;
+use db::MockDatabase as Database;
 #[cfg(not(test))]
-use texture::TextureManager;
+use image::ImageCache;
 #[cfg(test)]
-use texture::MockTextureManager as TextureManager;
+use image::MockImageCache as ImageCache;
 ```
 
 ### Limitations
 
-`test_doubles!` and `test_doubles_prefixed!` do not support:
+For `test_doubles!` and `test_doubles_prefixed!`:
 
-- Glob imports, like `use blah::*;`
+- Glob imports, such as `use blah::*;`, are not supported

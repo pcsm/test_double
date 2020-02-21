@@ -3,33 +3,10 @@ extern crate proc_macro;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 
-#[proc_macro]
-pub fn test_doubles(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let mut output = TokenStream::new();
-    functionlike_internal(&input.to_string(), &mut output, RenamingMode::Append);
-    output.into()
-}
-
-#[proc_macro]
-pub fn test_doubles_prefixed(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let mut output = TokenStream::new();
-    functionlike_internal(&input.to_string(), &mut output, RenamingMode::Prefix);
-    output.into()
-}
-
 #[derive(Copy, Clone, Debug)]
 enum RenamingMode {
     Append,
     Prefix
-}
-
-fn functionlike_internal(input: &str, output: &mut TokenStream, renaming_mode: RenamingMode) {
-    // Generate the AST from the token stream we were given
-    let file: syn::File = syn::parse_str(input).expect("Failed to parse input");
-
-    for item in file.items {
-        process_single_item(item, None, output, renaming_mode);
-    }
 }
 
 /// Can be used like `#[test_double]` to use `Mock____` in tests or
@@ -71,6 +48,29 @@ fn attribute_internal(metadata: &str, input: &str, output: &mut TokenStream, ren
     let item: syn::Item = syn::parse_str(input).expect("Failed to parse input");
 
     process_single_item(item, alternate_ident, output, renaming_mode);
+}
+
+#[proc_macro]
+pub fn test_doubles(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let mut output = TokenStream::new();
+    functionlike_internal(&input.to_string(), &mut output, RenamingMode::Append);
+    output.into()
+}
+
+#[proc_macro]
+pub fn test_doubles_prefixed(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let mut output = TokenStream::new();
+    functionlike_internal(&input.to_string(), &mut output, RenamingMode::Prefix);
+    output.into()
+}
+
+fn functionlike_internal(input: &str, output: &mut TokenStream, renaming_mode: RenamingMode) {
+    // Generate the AST from the token stream we were given
+    let file: syn::File = syn::parse_str(input).expect("Failed to parse input");
+
+    for item in file.items {
+        process_single_item(item, None, output, renaming_mode);
+    }
 }
 
 fn process_single_item(item: syn::Item, alternate_ident: Option<syn::Ident>, output: &mut TokenStream, renaming_mode: RenamingMode) {

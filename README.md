@@ -28,7 +28,7 @@ use image::ImageManager;
 use image::ImageManagerMock as ImageManager;
 ```
 
-If you'd like to provide an alternate subsituted name, you can do so:
+If you'd like to provide an alternate substituted name, you can do so:
 
 ```rust
 #[test_double(IMDummy)]

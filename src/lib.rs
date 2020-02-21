@@ -21,6 +21,7 @@ pub fn test_doubles_prefixed(input: proc_macro::TokenStream) -> proc_macro::Toke
     output.into()
 }
 
+#[derive(Copy, Clone, Debug)]
 enum RenamingMode {
     Append,
     Prefix
@@ -31,7 +32,7 @@ fn functionlike_internal(input: &str, output: &mut TokenStream, renaming_mode: R
     let file: syn::File = syn::parse_str(input).expect("Failed to parse input");
 
     for item in file.items {
-        process_single_item(item, None, output);
+        process_single_item(item, None, output, renaming_mode);
     }
 }
 
@@ -66,17 +67,17 @@ fn attribute_internal(metadata: &str, input: &str, output: &mut TokenStream) {
     // Generate the AST from the token stream we were given
     let item: syn::Item = syn::parse_str(input).expect("Failed to parse input");
 
-    process_single_item(item, alternate_ident, output);
+    process_single_item(item, alternate_ident, output, RenamingMode::Append);
 }
 
-fn process_single_item(item: syn::Item, alternate_ident: Option<syn::Ident>, output: &mut TokenStream) {
+fn process_single_item(item: syn::Item, alternate_ident: Option<syn::Ident>, output: &mut TokenStream, renaming_mode: RenamingMode) {
     match item {
         syn::Item::Use(mut use_original) => {
             // Make a copy of the original use statement
             let mut use_double = use_original.clone();
 
             modify_use_for_original(&mut use_original);
-            modify_use_for_double(&mut use_double, alternate_ident);
+            modify_use_for_double(&mut use_double, alternate_ident, renaming_mode);
 
             // Add the result to the back of our list of output tokens
             output.extend::<TokenStream>(quote!{
@@ -101,7 +102,7 @@ fn modify_use_for_original(use_original: &mut syn::ItemUse) {
     use_original.attrs.push(cfg_not_test);
 }
 
-fn modify_use_for_double(use_double: &mut syn::ItemUse, alternate_ident: Option<syn::Ident>) {
+fn modify_use_for_double(use_double: &mut syn::ItemUse, alternate_ident: Option<syn::Ident>, renaming_mode: RenamingMode) {
     // Add `#[cfg(test)]` to our test double use statement
     let test = quote! { (test) };
     let cfg_not_test = syn::Attribute {
@@ -113,14 +114,14 @@ fn modify_use_for_double(use_double: &mut syn::ItemUse, alternate_ident: Option<
     };
     use_double.attrs.push(cfg_not_test);
 
-    modify_tree_for_double(&mut use_double.tree, alternate_ident);
+    modify_tree_for_double(&mut use_double.tree, alternate_ident, renaming_mode);
 }
 
 // Change the name of the item used for the double use statement.
-fn modify_tree_for_double(use_tree: &mut syn::UseTree, alternate_ident: Option<syn::Ident>) {
+fn modify_tree_for_double(use_tree: &mut syn::UseTree, alternate_ident: Option<syn::Ident>, renaming_mode: RenamingMode) {
     match use_tree {
         syn::UseTree::Path(use_path) => {
-            modify_tree_for_double(&mut use_path.tree, alternate_ident)
+            modify_tree_for_double(&mut use_path.tree, alternate_ident, renaming_mode)
         },
         syn::UseTree::Group(use_group) => {
             if alternate_ident.is_some() {
@@ -128,14 +129,14 @@ fn modify_tree_for_double(use_tree: &mut syn::UseTree, alternate_ident: Option<s
             }
 
             for tree in use_group.items.iter_mut() {
-                modify_tree_for_double(tree, None)
+                modify_tree_for_double(tree, None, renaming_mode)
             }
         },
         syn::UseTree::Name(use_name) => {
             // Change the imported name and add an "as" also
             // `use blah::Bar` => `use blah::BarMock as Bar`
             let original_ident = use_name.ident.clone();
-            let default_ident = create_default_ident_for_double(&original_ident);
+            let default_ident = create_default_ident_for_double(&original_ident, renaming_mode);
             let modified_ident = alternate_ident.unwrap_or(default_ident);
 
             let rename = syn::UseRename {
@@ -148,7 +149,7 @@ fn modify_tree_for_double(use_tree: &mut syn::UseTree, alternate_ident: Option<s
         syn::UseTree::Rename(use_rename) => {
             // Change the imported name
             // `use blah::Blah as Foo` => `use blah::BlahMock as Foo`
-            let default_ident = create_default_ident_for_double(&use_rename.ident);
+            let default_ident = create_default_ident_for_double(&use_rename.ident, renaming_mode);
             use_rename.ident = alternate_ident.unwrap_or(default_ident);
         },
         syn::UseTree::Glob(_) => {
@@ -157,9 +158,13 @@ fn modify_tree_for_double(use_tree: &mut syn::UseTree, alternate_ident: Option<s
     }
 }
 
-fn create_default_ident_for_double(original_ident: &syn::Ident) -> syn::Ident {
+fn create_default_ident_for_double(original_ident: &syn::Ident, renaming_mode: RenamingMode) -> syn::Ident {
     let name = quote! { #original_ident };
-    syn::Ident::new(&format!("{}Mock", name), Span::call_site())
+
+    match renaming_mode {
+        RenamingMode::Append => syn::Ident::new(&format!("{}Mock", name), Span::call_site()),
+        RenamingMode::Prefix => syn::Ident::new(&format!("Mock{}", name), Span::call_site()),
+    }
 }
 
 fn create_cfg_path() -> syn::Path {

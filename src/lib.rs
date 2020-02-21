@@ -39,7 +39,7 @@ fn attribute_internal(metadata: &str, input: &str, output: &mut TokenStream, ren
                 let inner = expr_paren.expr;
                 let inner = quote! { #inner };
                 alternate_ident = Some(syn::Ident::new(&inner.to_string(), Span::call_site()));
-            }
+            },
             _ => panic!(error_message),
         }
     }

@@ -12,6 +12,15 @@ pub fn test_doubles(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     output.into()
 }
 
+#[proc_macro]
+pub fn test_doubles_prefixed(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let mut output = TokenStream::new();
+
+    functionlike_internal(&input.to_string(), &mut output, RenamingMode::Prefix);
+
+    output.into()
+}
+
 enum RenamingMode {
     Append,
     Prefix

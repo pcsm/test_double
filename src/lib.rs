@@ -100,7 +100,7 @@ fn modify_use_for_original(use_original: &mut syn::ItemUse) {
         style: syn::AttrStyle::Outer,
         bracket_token: Default::default(),
         path: create_cfg_path(),
-        tts: not_test.into(),
+        tokens: not_test.into(),
     };
     use_original.attrs.push(cfg_not_test);
 }
@@ -113,7 +113,7 @@ fn modify_use_for_double(use_double: &mut syn::ItemUse, alternate_ident: Option<
         style: syn::AttrStyle::Outer,
         bracket_token: Default::default(),
         path: create_cfg_path(),
-        tts: test.into(),
+        tokens: test.into(),
     };
     use_double.attrs.push(cfg_not_test);
 

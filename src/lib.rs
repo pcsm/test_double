@@ -7,12 +7,17 @@ use quote::quote;
 pub fn test_doubles(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let mut output = TokenStream::new();
 
-    functionlike_internal(&input.to_string(), &mut output);
+    functionlike_internal(&input.to_string(), &mut output, RenamingMode::Append);
 
     output.into()
 }
 
-fn functionlike_internal(input: &str, output: &mut TokenStream) {
+enum RenamingMode {
+    Append,
+    Prefix
+}
+
+fn functionlike_internal(input: &str, output: &mut TokenStream, renaming_mode: RenamingMode) {
     // Generate the AST from the token stream we were given
     let file: syn::File = syn::parse_str(input).expect("Failed to parse input");
 
@@ -176,7 +181,32 @@ mod tests {
         };
 
         let mut output = TokenStream::new();
-        functionlike_internal(&input.to_string(), &mut output);
+        functionlike_internal(&input.to_string(), &mut output, RenamingMode::Append);
+
+        assert_eq!(expected.to_string(), output.to_string());
+    }
+
+    #[test]
+    fn test_functionlike_basic_prefixed() {
+        let input = quote! {
+            use quote::Tokens;
+            use syn::Item;
+        };
+
+        let expected = quote! {
+            #[cfg(not(test))]
+            use quote::Tokens;
+            #[cfg(test)]
+            use quote::MockTokens as Tokens;
+
+            #[cfg(not(test))]
+            use syn::Item;
+            #[cfg(test)]
+            use syn::MockItem as Item;
+        };
+
+        let mut output = TokenStream::new();
+        functionlike_internal(&input.to_string(), &mut output, RenamingMode::Prefix);
 
         assert_eq!(expected.to_string(), output.to_string());
     }
@@ -195,7 +225,26 @@ mod tests {
         };
 
         let mut output = TokenStream::new();
-        functionlike_internal(&input.to_string(), &mut output);
+        functionlike_internal(&input.to_string(), &mut output, RenamingMode::Append);
+
+        assert_eq!(expected.to_string(), output.to_string());
+    }
+
+    #[test]
+    fn test_functionlike_group_prefixed() {
+        let input = quote! {
+            use quote::{Tokens, TokenStream};
+        };
+
+        let expected = quote! {
+            #[cfg(not(test))]
+            use quote::{Tokens, TokenStream};
+            #[cfg(test)]
+            use quote::{MockTokens as Tokens, MockTokenStream as TokenStream};
+        };
+       
+        let mut output = TokenStream::new();
+        functionlike_internal(&input.to_string(), &mut output, RenamingMode::Prefix);
 
         assert_eq!(expected.to_string(), output.to_string());
     }

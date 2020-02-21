@@ -28,7 +28,11 @@ use image::ImageManager;
 use image::ImageManagerMock as ImageManager;
 ```
 
-The substituted type name defaults to the original name, postfixed with `Mock`. You can also provide an alternate substituted name to be used instead:
+The substituted type name defaults to the original name, with `Mock` appended to it.
+
+### Alternate Name
+
+You can also provide an alternate name to be substituted instead:
 
 ```rust
 #[test_double(IMDummy)]
@@ -42,7 +46,9 @@ use image::ImageManager;
 use image::IMDummy as ImageManager;
 ```
 
-As a shortcut, if you would like the alternate substituted name to be the original name, _prefixed_ with `Mock`, you can use the `#[test_double_prefixed]` macro instead:
+### Prefixed
+
+As a shortcut, if you would like to use the original type name, _prefixed_ with `Mock` instead of appended, you can use the `#[test_double_prefixed]` macro:
 
 ```rust
 #[test_double_prefixed]
@@ -56,12 +62,12 @@ use image::ImageManager;
 use image::MockImageManager as ImageManager;
 ```
 
-### Limitations
+### Limitations 
 
-`#[test_double]` and `#[test_double_prefixed]` can't be used with:
+`#[test_double]` and `#[test_double_prefixed]` do not support:
 
 - Glob imports, like `use blah::*;`
-- Grouped imports, like `use blah::{foo, bar};`, when providing an alternate substituted name
+- When providing an alternate substituted name, grouped imports, such as `use blah::{foo, bar};`
 
 ## Substituting Multiple Types
 
@@ -85,7 +91,9 @@ use texture::TextureManager;
 use texture::TextureManagerMock as TextureManager;
 ```
 
-Similar to `#[test_double_prefixed]`, there is a `test_doubles_prefixed!` macro that can prefix instead of postfixing:
+### Prefixed
+
+Similar to the single-type macros, there is a `test_doubles_prefixed!` macro that can prefix instead of appending:
 
 ```rust
 test_doubles_prefixed! {
@@ -107,6 +115,6 @@ use texture::MockTextureManager as TextureManager;
 
 ### Limitations
 
-`test_doubles!` can't be used with:
+`test_doubles!` and `test_doubles_prefixed!` do not support:
 
 - Glob imports, like `use blah::*;`

@@ -33,9 +33,7 @@ fn attribute_internal(metadata: TokenStream, input: &str, output: &mut TokenStre
     if !metadata.is_empty() {
         let error_message =
             "Invalid input to #[test_double] - use it like #[test_double(AlternateName)].";
-        let meta: syn::Meta = syn::parse2(metadata).expect(error_message);
-        let meta_quote = quote! { #meta };
-        alternate_ident = Some(syn::Ident::new(&meta_quote.to_string(), Span::call_site()));
+        alternate_ident = Some(syn::parse2::<syn::Ident>(metadata).expect(error_message));
     }
 
     // Generate the AST from the token stream we were given

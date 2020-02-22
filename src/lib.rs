@@ -14,7 +14,7 @@ enum RenamingMode {
 #[proc_macro_attribute]
 pub fn test_double(metadata: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let mut output = TokenStream::new();
-    attribute_internal(&metadata.to_string(), &input.to_string(), &mut output, RenamingMode::Append);
+    attribute_internal(metadata.into(), &input.to_string(), &mut output, RenamingMode::Append);
     output.into()
 }
 
@@ -23,25 +23,17 @@ pub fn test_double(metadata: proc_macro::TokenStream, input: proc_macro::TokenSt
 #[proc_macro_attribute]
 pub fn test_double_prefixed(metadata: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let mut output = TokenStream::new();
-    attribute_internal(&metadata.to_string(), &input.to_string(), &mut output, RenamingMode::Prefix);
+    attribute_internal(metadata.into(), &input.to_string(), &mut output, RenamingMode::Prefix);
     output.into()
 }
 
-fn attribute_internal(metadata: &str, input: &str, output: &mut TokenStream, renaming_mode: RenamingMode) {
+fn attribute_internal(metadata: TokenStream, input: &str, output: &mut TokenStream, renaming_mode: RenamingMode) {
     let mut alternate_ident = None;
 
     if !metadata.is_empty() {
         let error_message =
             "Invalid input to #[test_double] - use it like #[test_double(AlternateName)].";
-        let meta: syn::Expr = syn::parse_str(metadata).expect(error_message);
-        match meta {
-            syn::Expr::Paren(expr_paren) => {
-                let inner = expr_paren.expr;
-                let inner = quote! { #inner };
-                alternate_ident = Some(syn::Ident::new(&inner.to_string(), Span::call_site()));
-            },
-            _ => panic!(error_message),
-        }
+        alternate_ident = Some(syn::parse2::<syn::Ident>(metadata).expect(error_message));
     }
 
     // Generate the AST from the token stream we were given
@@ -280,7 +272,7 @@ mod tests {
         };
 
         let mut output = TokenStream::new();
-        attribute_internal("", &input.to_string(), &mut output, RenamingMode::Append);
+        attribute_internal(TokenStream::new(), &input.to_string(), &mut output, RenamingMode::Append);
 
         assert_eq!(expected.to_string(), output.to_string());
     }
@@ -299,7 +291,7 @@ mod tests {
         };
 
         let mut output = TokenStream::new();
-        attribute_internal("", &input.to_string(), &mut output, RenamingMode::Prefix);
+        attribute_internal(TokenStream::new(), &input.to_string(), &mut output, RenamingMode::Prefix);
 
         assert_eq!(expected.to_string(), output.to_string());
     }
@@ -318,7 +310,7 @@ mod tests {
         };
 
         let mut output = TokenStream::new();
-        attribute_internal("", &input.to_string(), &mut output, RenamingMode::Append);
+        attribute_internal(TokenStream::new(), &input.to_string(), &mut output, RenamingMode::Append);
 
         assert_eq!(expected.to_string(), output.to_string());
     }
@@ -337,7 +329,7 @@ mod tests {
         };
 
         let mut output = TokenStream::new();
-        attribute_internal("", &input.to_string(), &mut output, RenamingMode::Prefix);
+        attribute_internal(TokenStream::new(), &input.to_string(), &mut output, RenamingMode::Prefix);
 
         assert_eq!(expected.to_string(), output.to_string());
     }
@@ -356,7 +348,7 @@ mod tests {
         };
 
         let mut output = TokenStream::new();
-        attribute_internal("", &input.to_string(), &mut output, RenamingMode::Append);
+        attribute_internal(TokenStream::new(), &input.to_string(), &mut output, RenamingMode::Append);
 
         assert_eq!(expected.to_string(), output.to_string());
     }
@@ -375,13 +367,15 @@ mod tests {
         };
 
         let mut output = TokenStream::new();
-        attribute_internal("", &input.to_string(), &mut output, RenamingMode::Prefix);
+        attribute_internal(TokenStream::new(), &input.to_string(), &mut output, RenamingMode::Prefix);
 
         assert_eq!(expected.to_string(), output.to_string());
     }
 
     #[test]
     fn test_attribute_alternate_name() {
+        let meta = quote!{TokensAlternate};
+
         let input = quote! {
             use quote::Tokens;
         };
@@ -394,13 +388,15 @@ mod tests {
         };
 
         let mut output = TokenStream::new();
-        attribute_internal("(TokensAlternate)", &input.to_string(), &mut output, RenamingMode::Append);
+        attribute_internal(meta, &input.to_string(), &mut output, RenamingMode::Append);
 
         assert_eq!(expected.to_string(), output.to_string());
     }
 
     #[test]
     fn test_attribute_alternate_name_prefixed() {
+        let meta = quote!{TokensAlternate};
+
         let input = quote! {
             use quote::Tokens;
         };
@@ -413,7 +409,7 @@ mod tests {
         };
 
         let mut output = TokenStream::new();
-        attribute_internal("(TokensAlternate)", &input.to_string(), &mut output, RenamingMode::Prefix);
+        attribute_internal(meta, &input.to_string(), &mut output, RenamingMode::Prefix);
 
         assert_eq!(expected.to_string(), output.to_string());
     }
@@ -421,12 +417,14 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_attribute_group_alternate_name() {
+        let meta = quote!{TokensAlternate};
+
         let input = quote! {
             use quote::{Tokens, TokenStream};
         };
 
         let mut output = TokenStream::new();
-        attribute_internal("(TokensAlternate)", &input.to_string(), &mut output, RenamingMode::Append);
+        attribute_internal(meta, &input.to_string(), &mut output, RenamingMode::Append);
         // Panic: alternate names can't be used with import groups
     }
 }

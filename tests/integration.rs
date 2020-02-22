@@ -43,7 +43,7 @@ mod appended {
     mod attribute_alt_name {
         use test_double::test_double;
 
-        #[test_double((DummyAnalytics))]
+        #[test_double(DummyAnalytics)]
         use super::Analytics;
 
         sa::assert_type_eq_all!(Analytics, super::DummyAnalytics);
@@ -89,7 +89,7 @@ mod prefixed {
     mod attribute_alt_name {
         use test_double::test_double_prefixed;
 
-        #[test_double_prefixed((DummyAnalytics))]
+        #[test_double_prefixed(DummyAnalytics)]
         use super::Analytics;
 
         sa::assert_type_eq_all!(Analytics, super::DummyAnalytics);
